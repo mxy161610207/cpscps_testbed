@@ -1,0 +1,17 @@
+# 先全部忽略，只保留关注的文件
+/*
+
+# 保留的配置文件如下
+!.gitignore
+!README.md
+
+# platform/
+!platform/
+**/__pycache__
+**/log
+
+# platform 启动模块
+!platform/*.py
+
+
+

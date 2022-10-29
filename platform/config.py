@@ -1,0 +1,1 @@
+show_battery_info_once = False
