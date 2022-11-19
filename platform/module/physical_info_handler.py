@@ -1,35 +1,38 @@
 import threading
 import json
 import time
-from .sensor_source import SensorSource
-from .sensor_source import LOCATION_PORT
+import random
+from .sensor_source import SensorSourceHandler
 from location.location_config import SystemState
 
 # Data from physical  
-class PhysicalMsg(SensorSource):
-    def __init__(self,car_handler):
-        print("Register Phy Sensor sender")
-        super(PhysicalMsg,self).__init__(port=LOCATION_PORT,tag="P")
-        self._car_handler=car_handler
+class PhysicalInfoHandler(SensorSourceHandler):
+    def __init__(self,self_addr,server_addr,car_handler):
+        print("__init__ PhysicalInfoHandler start")
+        super().__init__(self_addr,server_addr ,tag = 'P')
 
+        self._car_handler=car_handler
         self._sys_sub_modules = []
 
         # python list is thread-safe
+        # 暂存需要回复的数据包
         self._wait_list=[]
         self._wait_list_lock=threading.Lock()
+        print("__init__ PhysicalInfoHandler end")
 
-    # 小车发送数据包的处理
+    # Phycial端 - 小车发送数据包的处理
+    # 1) 添加term_id和发送时间time
+    # 2) 对需要回复的packet, 添加进等待队列
     def sender_send_json(self,send_json,need_reply = False):
+        # print("ok", self.sender)
         send_json['term_id']=self.sender._get_term_id()
-        send_json['time']=time.time()
+        send_json['send_time']=time.time()
+
         if (need_reply):
             # print("[query]",send_json)
             self._wait_list_lock.acquire()
             self._wait_list.append(send_json)
             self._wait_list_lock.release()
-            
-            # if (self.query_type == "snapshot"):
-            #     print("snapshot acquire lock")
         
         send_info=json.dumps(send_json)
         self.sender.send_msg(send_info)
@@ -39,12 +42,18 @@ class PhysicalMsg(SensorSource):
         
         if (need_reply):
             send_json['status']='wait'
-            print("[query]", send_json)
+            if (send_json['type']!='SYNC'):
+                print("[query]", send_json)
         pass
 
-    # 小车收到json的处理
+    # Phycial端 - 小车收到回复数据包的处理
+    # "query_id": 对发送的指定term_id的回复
+    # 更新json，追加回复，用户处理
+    # 超时 删除数据包
     def handle_recv_json(self,recv_json):
         print("[get reply_json]",recv_json)
+        
+        # 莫名奇妙的回复
         if ("query_id" not in recv_json):
             pass
 
@@ -60,7 +69,7 @@ class PhysicalMsg(SensorSource):
                 cur_json['status']='get'
                 removed_json.append(cur_json)
             else:
-                if (time.time()-cur_json['time']>5):
+                if (time.time()-cur_json['send_time']>5):
                     cur_json['status']='timeout'
                     removed_json.append(cur_json)
         
@@ -69,8 +78,7 @@ class PhysicalMsg(SensorSource):
 
         self._wait_list_lock.release()
         return
-        
-
+         
     # 小车的模块订阅
     def sys_add_sub_module(self,module):
         self._sys_sub_modules.append(module)
@@ -169,16 +177,29 @@ class PhysicalMsg(SensorSource):
         self.angle_init_once = False
         self.sender_send_json(system_json, need_reply=False)
         return
+    
+    def send_server_sync_json(self, is_reset = False):
+        sync_json={
+            'type':'SYNC',
+            'info':{
+                'status': 'init' if is_reset else 'sync',
+                'sync_code': random.randint(0,10000)
+            }
+        }
 
+        print('和Location服务器 初始化同步中... | sync code = {}'.format(sync_json['info']['sync_code']))
 
-    # unused 小车动作检测
-    # def explore_action(self,msg):
-    #     reply = self.sender.send_msg(msg, need_reply=True)
-    #     self.sender.send_msg(msg, need_reply=True)
-    #     self.sender.query_event.wait()
-    #     reply = self.sender.get_reply()
+        self.sender_send_json(sync_json,need_reply=True)
 
-    #     return reply
+        while('status' not in sync_json or sync_json['status']=='wait'):
+            # time.sleep(1)
+            # print("[query_status]",query_json['status'])
+            continue
+
+        if (sync_json['status']=='timeout'):
+            return False
+        return True
+
 
     def query_position(self):
         query_json={

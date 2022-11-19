@@ -9,7 +9,7 @@ from robomaster import protocol
 from robomaster import util
 from robomaster import action
 
-import user_watcher
+from module import sdk_handler
 from patch.safe_action import SafeChassisMoveAction
 from module.platform_timer import PlatformTimer
 '''
@@ -26,8 +26,8 @@ def _md_auto_stop_timer(self, api="drive_speed"):
     else:
         logger.warning("Chassis: unsupported api:{0}".format(api))
 
-    # user_watcher.DRIVE_SPEED_ADJUSTER.proto_clear()
-    user_watcher.SECURITY_MONITOR.event_set_by("END")
+    # sdk_handler.DRIVE_SPEED_ADJUSTER.proto_clear()
+    sdk_handler.SECURITY_MONITOR.event_set_by("END")
 
 def md_drive_speed(self, x=0.0, y=0.0, z=0.0, timeout=None):
     """ 修改后的drive_speed
@@ -39,7 +39,7 @@ def md_drive_speed(self, x=0.0, y=0.0, z=0.0, timeout=None):
     
     logger.info("x_spd:{0:f}, y_spd:{1:f}, z_spd:{2:f}".format(proto._x_spd, proto._y_spd, proto._z_spd))
 
-    return user_watcher.DRIVE_SPEED_ADJUSTER.register_proto(self, proto,timeout)
+    return sdk_handler.DRIVE_SPEED_ADJUSTER.register_proto(self, proto,timeout)
 
 
 def md_move(self, x=0, y=0, z=0, xy_speed=0.5, z_speed=30):

@@ -2,7 +2,7 @@ import robomaster.action as offical
 from robomaster.action import *
 from robomaster.chassis import ChassisMoveAction
 
-import user_watcher
+from module import sdk_handler
 
 '''
 class ActionDispatcher(object):
@@ -37,7 +37,7 @@ def md_send_action(self, action, action_type=offical.ACTION_NOW):
         向Loction_server发送运行信息
         '''
         if isinstance(action, ChassisMoveAction):
-            user_watcher.PHY_SENDER.send_action_info(action._encode_json)
+            sdk_handler.PHY_SENDER.send_action_info(action._encode_json)
         '''edit end
         '''
 

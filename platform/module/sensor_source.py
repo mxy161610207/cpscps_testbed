@@ -6,20 +6,17 @@ import warnings
 import copy
 import json
 
-SERVER_IP = '127.0.0.1'
-IR_SENSOR_PORT = 41997
-LOCATION_PORT = 41234
-SAFE_CHECK_PORT = 41998
-UNUSED_PORT=42143
+from abc import abstractmethod
 
 class SensorSourceSender:
-    def __init__(self,ip=SERVER_IP,port=42143,manager=None) -> None:
-        self._server_addr=(ip,port)
+    def __init__(self,self_addr,server_addr,manager) -> None:
         self._manager=manager
         
         self.term_id_lock = threading.Lock()
         self.term_id=0
-        
+
+        self._client_addr = self_addr
+        self._server_addr = server_addr
         self.start_recv_thread()
 
         self._handle_recv_func=None
@@ -28,10 +25,11 @@ class SensorSourceSender:
     def _get_term_id(self):
         self.term_id_lock.acquire()
         curr_id = self.term_id
-        self.term_id = (self.term_id+1) % 1000
+        self.term_id = (self.term_id+1) % 10000
         self.term_id_lock.release()
         return curr_id
 
+    @classmethod
     def create_init_msg(self):
         init_msg_json={'type':'INIT'}
         msg_str=json.dumps(init_msg_json)
@@ -39,6 +37,8 @@ class SensorSourceSender:
 
     def start_recv_thread(self):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.server_socket.bind(self._client_addr)
+
         self.t_recv = threading.Thread(target=self.recv_msg)
         self.t_recv.daemon = True
         self.t_recv.start()
@@ -48,17 +48,19 @@ class SensorSourceSender:
         self.server_socket.sendto(send_info.encode('utf-8'),self._server_addr)
         pass
         
-    # While True的线程 一直等待消息
+    # 线程 - While True 一直接受消息
     def recv_msg(self):
         # 先测试这个接口是否是有效接口
-        self.server_socket.sendto(self.create_init_msg().encode('utf-8'),self._server_addr)
+        while not self._manager.send_server_sync_json(is_reset=True):
+            time.sleep(1)
+        
+        print('服务器已相应(addr)=',self._server_addr)
         while True:
             try:
                 recv_info, _ = self.server_socket.recvfrom(1024)
             except Exception as e:
                 print(e)
                 print('远程主机已关闭 (addr)=',self._server_addr)
-                print('是否忘记打开服务器定位端？..')
                 break
             recv_info = recv_info.decode('utf-8')
             # print("[{2}] {0} \t  服务器端消息：{1}".format(
@@ -68,18 +70,15 @@ class SensorSourceSender:
             if (recv_info=='ack'):continue
 
             recv_json=json.loads(recv_info)
-            self._handle_recv_json(recv_json)
+            self._manager.handle_recv_json(recv_json)
         
         # self.udp_send.kill()
-        self.server_socket.close()
-    
-    # 每次收到消息后的处理
-    def _handle_recv_json(self,recv_json):
-        if (self._manager is None): return
-        if (self._manager.handle_recv_json is None):
-            return
+        
+        print('数据接受线程{}终止,端口{}关闭'.format(
+            self._manager._tag,
+            self._client_addr))
 
-        self._manager.handle_recv_json(recv_json)
+        self.server_socket.close()
 
 class SensorSourceInfo:
     def __init__(self,tag=""):
@@ -113,42 +112,28 @@ class SensorSourceInfo:
             return None
         return self._cv2_image
 
-class SensorSource:
-    def __init__(self,port,tag):
-        self.sender=SensorSourceSender(SERVER_IP,port,self)
-        self.info=SensorSourceInfo()
-        self._status = False
+class SensorSourceHandler:
+    def __init__(self,self_addr,server_addr ,tag):
+        self._tag = tag
+
+        self.sender = SensorSourceSender(self_addr,server_addr,self)
+        self.info   = SensorSourceInfo()
+        self._online_status = False
         self.set_online()
         
     def set_online(self):
-        self._status = True
-    
+        self._online_status = True
+
     @property
     def is_online(self):
-        return self._status
+        return self._online_status
 
-# Data from simulate 
+    # 每次收到消息后的处理
+    @abstractmethod
+    def handle_recv_json(self,recv_json):
+        pass
+
+    @classmethod
+    def send_server_sync_json(self, is_reset = False):
+        pass
  
-class SimulateMsg(SensorSource):
-    def __init__(self):
-        super(SimulateMsg,self).__init__(port=IR_SENSOR_PORT,tag="Sim")
-    
-    '''
-    explore for different action API:
-        format: "? action [action_api] *args"
-    
-    1) move
-        ? action move {x} {y} {z} {xy_spd} {z_spd}
-    2) drive_speed #TODO
-        ? action drive_speed {x_spd} {y_spd} {z_spd}
-    '''
-    def handle_query_reply(self,reply_data):
-        reply_data = eval(reply_data)
-        # print("SIM:",reply_data)
-        F,B,L,R,time_tag,t = reply_data
-        self.set_sensor_data_info([F,R,B,L])
-        if (time_tag):
-            time_gap = time.time()-t
-            if (time_gap > 0.15): 
-                s = "\ncycle: {:.6f}".format(time_gap)
-                # warnings.warn(s,UserWarning)

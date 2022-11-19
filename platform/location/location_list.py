@@ -6,27 +6,15 @@ from .position import Position
 from .candidate import PositionCands
 from .action_analysis import ActionMonitor,MotionQueue,ActionAnalysis
 from .location_config import CALC_LOG, SystemState,OUTPUT_DIR
-from .fixed_size_queue import FixedSizeQueue
+from .location_queue import LocationQueue
 from . import position_config as pc
 
-class LocationQueue(FixedSizeQueue):
-    def __init__(self, size=200) -> None:
-        super().__init__(size)
-    
-    def put(self,elem):
-        assert(isinstance(elem,PositionCands))
-        super().put(elem)
-        
-
 class LocationList:
-    def __init__(self,default_len=200,name='default',need_sim_pair=False) -> None:
+    def __init__(self,default_len=200,name='default',syncer=None) -> None:
         self.state = SystemState.INIT
         self.name = name
-        
-        if (need_sim_pair): 
-            self._sim_pair = LocationList(50,name='Simulate',need_sim_pair=False)
-        else:
-            self._sim_pair = None
+        self.syncer = syncer
+        self._sim_pair = None
 
         # create two info queue
         self._loc_queue = LocationQueue(default_len)
@@ -34,6 +22,31 @@ class LocationList:
         self._motion_queue = MotionQueue(3)
 
         self.reset()
+    
+    @staticmethod
+    def make_pair(grd_list,sim_list):
+        assert(isinstance(grd_list,LocationList))
+        assert(isinstance(sim_list,LocationList))
+        grd_list._sim_pair = sim_list
+        return
+
+    def sync_to_syncer(self,pos_cand=None):
+        if (pos_cand is None):
+            self.syncer['x']=0
+            self.syncer['y']=0
+            self.syncer['deg']=90.0
+            self.syncer['rad']=math.radians(90)
+            self.syncer['status']=self._motion_queue.analysis().name
+            self.syncer['info']='None'
+            return 
+
+        assert(isinstance(pos_cand,PositionCands))
+        self.syncer['x']=pos_cand._pos.x
+        self.syncer['y']=pos_cand._pos.y
+        self.syncer['deg']=pos_cand._pos.deg
+        self.syncer['rad']=pos_cand._pos.rad
+        self.syncer['status']=self._motion_queue.analysis().name
+        self.syncer['info']=pos_cand._pos.pos_str
 
     def reset(self):
         self.state = SystemState.INIT
@@ -50,7 +63,8 @@ class LocationList:
         if (self.is_simulate): 
             fake_point._is_fake_point = False
         self._loc_queue.put(fake_point)
-        print("put one fake point,size = ",self.size)
+        self.sync_to_syncer(fake_point)
+        # print("put one fake point,size = ",self.size)
 
         self._motion_queue.clear()
 
@@ -64,17 +78,6 @@ class LocationList:
     def size(self):
         return self._loc_queue.size
 
-    def get_latest_pos(self,sz):
-        sz = min(sz,self.size)
-        l = []
-        for i in range(1,sz+1):
-            pc = self._loc_queue._queue[-i]
-            assert(isinstance(pc,PositionCands))
-            
-            l.append(pc._pos._calc_car_center().dict_style)
-        return l
-
-
     @property
     def is_guard(self):
         return self.name=='Guard' or self.has_sim_pair
@@ -86,12 +89,6 @@ class LocationList:
     @property
     def is_initialized(self):
         return self.state != SystemState.INIT
-
-    # @property
-    # def root(self):
-    #     assert(not self._loc_queue.is_empty)
-    #     assert(isinstance(self._loc_queue.head,PositionCands))
-    #     return self._loc_queue.head
 
     @property
     def current(self):
@@ -194,6 +191,7 @@ class LocationList:
         
         # 移动并更新图标
         self._loc_queue.put(pos_cand)
+        self.sync_to_syncer(pos_cand)
         print(">>> {} [append] {}".format(self.name,pos_cand._pos.pos_detail_str()),file=CALC_LOG)
         print(">>> {} [append] {}".format(self.name,pos_cand._pos.pos_detail_str()))
         # ! location server log
@@ -232,11 +230,13 @@ class LocationList:
         '''
             only for sim_tree
         '''
+        assert(self.is_simulate)
         nxt_irs_pos = ActionMonitor.act_motion(self.current._pos,motion)
         next_pos_cand = PositionCands(nxt_irs_pos)
         
         self._motion_queue.put(motion)
         self._loc_queue.put(next_pos_cand)
+        self.sync_to_syncer(next_pos_cand)
         next_pos_cand.print_position("{} [append]".format(self.name))
 
     def advance_once(self,sensor_data,msg):
@@ -461,39 +461,4 @@ class LocationList:
     def need_recover(self):
         return self.state==SystemState.LOSS
 
-
-    
-    # def get_last_motition(self,msg):
-    #     if (self._sim_motion):
-    #         s = "\n\n{:.3f} {:.3f} {:.3f}".format(self._sim_motion[0],self._sim_motion[1],self._sim_motion[2])
-    #     else:
-    #         s = "None"
-    #     # for _ in range(20):
-    #     #     print("sim motion {}".format(s))
-    #     if (msg):
-    #         msg.append(s)
-
-    # @staticmethod
-    # def get_location_message(cur_tree):
-    #     assert(isinstance(cur_tree,LocationList))
-    #     msg = "{},{:.3f},{:.3f},{:.3f}".format(
-    #         cur_tree.motion_queue.analysis(),
-    #         cur_tree.cur_pos.x,
-    #         cur_tree.cur_pos.y,
-    #         cur_tree.cur_pos.deg,
-    #     )
-    #     print("location pos=",msg)
-    #     return msg
-
-    # @staticmethod
-    # def get_action_explore(cur_tree,argv):
-    #     assert(isinstance(cur_tree,LocationList))
-    #     action = ActionMonitor(cur_tree.cur_pos,argv)
-    #     state,condition = action.explore()
-    #     msg = "{},{},{},{},{}".format(
-    #         state,
-    #         condition[0],condition[1],condition[2],condition[3]
-    #     )
-    #     print("action check=",msg)
-    #     return msg
 

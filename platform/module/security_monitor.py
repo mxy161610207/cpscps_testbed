@@ -2,7 +2,7 @@ import threading
 import json
 import time
 
-import user_watcher
+from . import sdk_handler
 
 # 在PhysicalMsg.info的sensor满足条件时把车停下来，
 # 并切换系统到ADJUST状态
@@ -92,7 +92,7 @@ class SecurityMonitor():
             pos=self._get_set_reply()
         else:
             # 正常结束
-            pos=user_watcher.PHY_SENDER.query_position()
+            pos=sdk_handler.PHY_SENDER.query_position()
         return pos
     
     def isSet(self):
@@ -120,15 +120,15 @@ class SecurityMonitor():
         # print("stop wait success")
         if (self._set_reason=='STOP'):
             print("stop car")
-            user_watcher.EP_ROBOT.chassis._dij_drive_speed(0, 0, 0)
+            sdk_handler.EP_ROBOT.chassis._dij_drive_speed(0, 0, 0)
             self._set_reason='ADJUST'
 
     def adjust(self,api,obj,is_manual=False):
-        user_watcher.CAR_HANDLER.flush_undefined_behavior()
+        sdk_handler.CAR_HANDLER.flush_undefined_behavior()
         print("adjust for",api)
         if api=='move':
             print(obj.percent_str)
         else:
             pass
         
-        user_watcher.CAR_HANDLER.adjust(is_manual)
+        sdk_handler.CAR_HANDLER.adjust(is_manual)

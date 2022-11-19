@@ -1,7 +1,7 @@
 from threading import Lock,Thread,Event
 import time
 
-import user_watcher
+from . import sdk_handler
 
 # 系统平台切换、计时器同步
 # 一些计时器可能涉及adjust状态，需要设置时间补偿
@@ -75,12 +75,12 @@ class PlatformTimer(Thread):
         self.kwargs = kwargs if kwargs is not None else {}
         self.finished = Event()
 
-        user_watcher.TIME_MANAGER.timer_register(self)
+        sdk_handler.TIME_MANAGER.timer_register(self)
 
     def cancel(self):
         """Stop the timer if it hasn't finished yet."""
         self.finished.set()
-        user_watcher.TIME_MANAGER.timer_delete(self)
+        sdk_handler.TIME_MANAGER.timer_delete(self)
         
     def get(self):
         self.interval_lock.acquire()
@@ -109,4 +109,4 @@ class PlatformTimer(Thread):
         if not self.finished.is_set():
             self.function(*self.args, **self.kwargs)
         self.finished.set()
-        user_watcher.TIME_MANAGER.timer_delete(self)
+        sdk_handler.TIME_MANAGER.timer_delete(self)

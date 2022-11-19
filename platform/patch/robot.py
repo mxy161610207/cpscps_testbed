@@ -7,7 +7,8 @@ from robomaster import client
 from robomaster import action
 from robomaster import conn
 
-import user_watcher
+from module import sdk_handler
+from module.platform_exception import PlatformException
 
 """
 class Robot(robot.RobotBase):
@@ -20,45 +21,15 @@ def md_initialize(self, conn_type=config.DEFAULT_CONN_TYPE, proto_type=config.DE
 
     注意：如需修改默认连接方式，可在conf.py中指定DEFAULT_CONN_TYPE
     """
-    print("修改后的initialize")
-    self._proto_type = proto_type
-    self._conn_type = conn_type
-    if not self._client:
-        logger.info("Robot: try to connection robot.")
-        conn1 = self._wait_for_connection(conn_type, proto_type, sn)
-        if conn1:
-            logger.info("Robot: initialized with {0}".format(conn1))
-            self._client = client.Client(9, 6, conn1)
-        else:
-            logger.info("Robot: initialized, try to use default Client.")
-            try:
-                self._client = client.Client(9, 6)
-            except Exception as e:
-                logger.error("Robot: initialized, can not create client, return, exception {0}".format(e))
-                return False
+    print("[SDK] __call__ 修改后的initialize")
 
     try:
-        self._client.start()
+        self._dij_initialize(conn_type, proto_type, sn)
     except Exception as e:
-        logger.error("Robot: Connection Create Failed.")
-        raise e
-
-    self._action_dispatcher = action.ActionDispatcher(self.client)
-    self._action_dispatcher.initialize()
-    # Reset Robot, Init Robot Mode.
-    self._scan_modules()
-
-    # set sdk mode and reset
-    self._enable_sdk(1)
-    self.reset()
-
-    self._ftp.connect(self.ip)
-
-    # start heart beat timer
-    self._running = True
-    self._start_heart_beat_timer()
-    self._initialized = True
-
+        print(e)
+        print("[platform] DJI SDK的initialize 运行失败!")
+        return False
+    
     """ 
     默认以最大频率开启所有订阅 mxy_edit
 
@@ -66,16 +37,17 @@ def md_initialize(self, conn_type=config.DEFAULT_CONN_TYPE, proto_type=config.DE
     _camera: 相机
 
     """
-    user_watcher.PHY_SENDER.set_online()
-    user_watcher.PHY_SENDER.sys_add_sub_module(self.sensor)
-    user_watcher.PHY_SENDER.sys_add_sub_module(self.gimbal)
-    user_watcher.PHY_SENDER.sys_sub_all()
+    sdk_handler.PHY_SENDER.set_online()
+    sdk_handler.PHY_SENDER.sys_add_sub_module(self.sensor)
+    sdk_handler.PHY_SENDER.sys_add_sub_module(self.gimbal)
+    sdk_handler.PHY_SENDER.sys_sub_all()
 
     # """ 
     # 小车在矩形场地中进行同步 mxy_edit
     # """
-    # user_watcher.physical_platform_initialize(self)
+    # sdk_handler.physical_platform_initialize(self)
 
+    print("[SDK] __success__ 修改后的initialize")
     return True
 
 def md_close(self):
@@ -83,7 +55,7 @@ def md_close(self):
         关闭所有系统订阅 mxy_edit
         sys_unsub_all
         """
-        user_watcher.PHY_SENDER.sys_unsub_all()
+        sdk_handler.PHY_SENDER.sys_unsub_all()
 
         self._ftp.stop()
         if self._initialized:
@@ -100,6 +72,10 @@ def md_close(self):
         logger.info("Robot close")
         print("修改后的close")
 
+
 # modify list
+
+offical.Robot._dij_initialize = offical.Robot.initialize
+
 offical.Robot.initialize = md_initialize
 offical.Robot.close = md_close

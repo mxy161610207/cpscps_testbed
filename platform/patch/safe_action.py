@@ -5,7 +5,7 @@ import threading,math
 from robomaster import logger
 from robomaster import action
 
-import user_watcher
+from module import sdk_handler
 from module.platform_exception import PlatformException
 from location.location_list import ActionMonitor
 
@@ -141,7 +141,7 @@ class SafeChassisMoveAction(action.Action):
 
     def _start_security_monitor(self):
         print("+++ security_monitor init")
-        user_watcher.SECURITY_MONITOR.register_and_start(
+        sdk_handler.SECURITY_MONITOR.register_and_start(
             obj=self, check_distance=200
         )
 
@@ -168,11 +168,11 @@ class SafeChassisMoveAction(action.Action):
 
         print("+++ action completed")
 
-        if (not user_watcher.SECURITY_MONITOR.isSet()):
-            user_watcher.SECURITY_MONITOR.event_set_by('END')
+        if (not sdk_handler.SECURITY_MONITOR.isSet()):
+            sdk_handler.SECURITY_MONITOR.event_set_by('END')
 
         if (not exec_result):
-            user_watcher.flush_undefined_behavior()
+            sdk_handler.flush_undefined_behavior()
 
     def run_action(self):
         while(True):
@@ -185,14 +185,14 @@ class SafeChassisMoveAction(action.Action):
         ))
 
     def _cur_position_security_check(self):
-        dis = user_watcher.PHY_INFO.get_sensor_data_info()[:]
+        dis = sdk_handler.PHY_INFO.get_sensor_data_info()[:]
         min_id = 0
         for i in range(4):
             if dis[i]<dis[min_id]: min_id=i
 
         if (dis[min_id]>210): return 
         
-        user_watcher.PHY_SENDER.send_adjust_status(is_on=True)
+        sdk_handler.PHY_SENDER.send_adjust_status(is_on=True)
         print("start at an danger place")
         self.move_adjust(is_manual=False)
     
@@ -201,7 +201,7 @@ class SafeChassisMoveAction(action.Action):
         self._actual_action = self._generate_action()
         print("> start ",self._actual_action._encode_json)
 
-        old_pos = user_watcher.PHY_SENDER.query_position()
+        old_pos = sdk_handler.PHY_SENDER.query_position()
         print("old_pos = {:.3f} {:.3f} deg = {:.3f}".format(old_pos['x'],old_pos['y'],old_pos['deg']))
 
         # send action
@@ -216,18 +216,18 @@ class SafeChassisMoveAction(action.Action):
         # print("send actual action")
 
         # one of monitor will set
-        user_watcher.SECURITY_MONITOR.wait_for_trigger()
-        if not user_watcher.SECURITY_MONITOR.is_accessable(self):
+        sdk_handler.SECURITY_MONITOR.wait_for_trigger()
+        if not sdk_handler.SECURITY_MONITOR.is_accessable(self):
             raise PlatformException("SECURITY_MONITOR not accessable for SafeAction{}".format(self._encode_json))
 
         # 获取从start pos 到当前位置的移动距离
 
-        new_pos = user_watcher.SECURITY_MONITOR.get_set_position()
+        new_pos = sdk_handler.SECURITY_MONITOR.get_set_position()
 
         self._update_current(old_pos,new_pos)
 
         # 下一次动作迭代        
-        set_reason = user_watcher.SECURITY_MONITOR.get_set_reason()
+        set_reason = sdk_handler.SECURITY_MONITOR.get_set_reason()
         print("set_reason =",set_reason)
 
         if (set_reason == "ADJUST"):
@@ -250,5 +250,5 @@ class SafeChassisMoveAction(action.Action):
         return    
 
     def move_adjust(self,is_manual=False):
-        user_watcher.SECURITY_MONITOR.adjust(api='move',obj=self,is_manual=is_manual)
+        sdk_handler.SECURITY_MONITOR.adjust(api='move',obj=self,is_manual=is_manual)
 

@@ -5,13 +5,13 @@ import time
 # platform
 from .platform_exception import PlatformException
 from .platform_timer import PlatformTimerManager
-from .physical_msg import PhysicalMsg
+from .physical_info_handler import PhysicalInfoHandler
 from .security_monitor import SecurityMonitor
 from .drive_adjuster import DriveSpeedAdjuster
 
 class RoboMasterEPWrapper:
-    def __init__(self):
-        print("__robo_init__")
+    def __init__(self,server_addr,phy_sender_addr,sim_sender_addr=None):
+        print("__init__ RoboMasterEPWrapper start")
         self._status = 1
         self._rot_flip=-1
         
@@ -19,12 +19,14 @@ class RoboMasterEPWrapper:
         self._has_active_car=False
         self._robomaster_ep=None
 
-        self._phy_msg_sender = PhysicalMsg(self)
+        self._phy_msg_sender = PhysicalInfoHandler(phy_sender_addr,server_addr,self)
         self._sim_msg_recver = None
 
         self._timer_manager = PlatformTimerManager(self)
         self._security_monitor = SecurityMonitor(self)
         self._drive_speed_adjuster = DriveSpeedAdjuster(self)
+
+        print("__init__ RoboMasterEPWrapper end")
     
     @property
     def has_active_car(self):
@@ -122,7 +124,10 @@ class RoboMasterEPWrapper:
 
         self._timer_manager.adjust_status_end()
 
-    def do_action(self,action,ep_chassis,move_dis=0.5,rot_deg=45,mute=False):
+    def do_action(self,action,move_dis=0.5,rot_deg=45,mute=False):
+
+        ep_chassis=self._robomaster_ep.chassis
+        
         xy_speed=0.3
         z_speed=60
         if (action == 'W'):

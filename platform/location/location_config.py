@@ -4,8 +4,8 @@ from enum import Enum
 
 ##### global variable ####
 SERVER_IP = '127.0.0.1'
-LOCATION_PORT = 41234
 OUTPUT_DIR = os.path.dirname(os.path.realpath(__file__))+'/log/'
+os.makedirs(os.path.dirname(OUTPUT_DIR), exist_ok=True)
 
 CALC_LOG=None
 if (CALC_LOG is None):

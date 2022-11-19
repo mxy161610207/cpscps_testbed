@@ -1,5 +1,5 @@
 from multiprocessing.managers import BaseManager
-from multiprocessing import Value,Process
+from multiprocessing import Value,Process,Queue,Manager
 
 import time
 
@@ -9,57 +9,101 @@ from location import location_server
 from ui import display_resource_manager 
 from ui import display_raiser
 
-import user_watcher
+from module import sdk_handler
 
 if __name__ == '__main__': 
+    # 系统多进程资源
+    platform_manager = Manager()    
 
-    # --- multi-process Class Object ---
-    loc_manager = BaseManager()
-    loc_manager.register('location_server',location_server.LocationServer)
-    loc_manager.start()
+    platform_status_resources = {}
+    platform_message_resources = {}
+    platform_socket_address = {
+        'phy_sender': ('127.0.0.1', 41997),
+        'sdk' : ('127.0.0.1', 41011),
+        'location': ('127.0.0.1', 41234),
+    }
 
-    # dsp_manager = BaseManager()
-    # dsp_manager.register('resource_manager',display_resource_manager.DispalyResourceManager)
-    # dsp_manager.start()
+    # --- 定位系统工具 ---
+    platform_status_resources['location'] = Value('i',0)
+    platform_message_resources['location'] = Queue(-1)
+    platform_message_resources['grd_position'] = platform_manager.dict()
+    platform_message_resources['sim_position'] = platform_manager.dict()
 
-    # --- multi-processer ---
-    # 1) 平台总进程
-    process_name = 'raise_platform'
+    # --- SDK通信工具 ---
+    platform_status_resources['sdk'] = Value('i',0)
+    platform_message_resources['sdk'] = Queue(-1)
+
+    # --- 平台前端工具 ---
+    platform_status_resources['display'] = Value('i',0)
+    platform_message_resources['display'] = Queue(-1)
+
+    # --- 多进程处理器定义 ---
+    # 1) 小车状态进程
+    process_name = 'raise_sdk_handler'
     proc_platform = Process(
-        target=user_watcher.raise_platform,
-        args=(process_name,)
+        target=sdk_handler.raiser,
+        args=(  process_name,
+                platform_status_resources,
+                platform_message_resources,
+                platform_socket_address)
     )
     proc_platform.daemon = True
     
     # 2) 定位系统进程
-    loc_server = loc_manager.location_server()
-    # 0/1/2 - server working/reset by user/shutdown by user
-    loc_server_status = Value('i', 0)
     process_name = 'raise_location_server'
     proc_server = Process(
-        target=location_server.raise_location_server,
-        args=(process_name,loc_server)
+        target=location_server.raiser,
+        args=(  process_name,
+                platform_status_resources,
+                platform_message_resources,
+                platform_socket_address)
     )
-    proc_server.daemon = True
+    proc_platform.daemon = True
   
     # 3) 前端显示进程
-    # res_manager = dsp_manager.resource_manager()
-    # res_manager.register_location_server(loc_server)
-    # process_name = 'raise_display'
-    # proc_display = Process(
-    #     target=display_raiser.raise_loction_display,
-    #     args=(process_name,res_manager,loc_server_status)
-    # )
+    process_name = 'raise_display'
+    proc_display = Process(
+        target=display_raiser.raiser,
+        args=(  process_name,
+                platform_status_resources,
+                platform_message_resources,
+                platform_socket_address)
+    )
 
+
+    # ------ 进程按顺序开启 -------
+    # 1) 定位服务器进程
     proc_server.start()
-    time.sleep(1)
+    location_server_status = platform_status_resources['location']
+    while (location_server_status.value == 0):
+        time.sleep(1)
+
+    print("---- processor [proc_server] start ----\n" *10)
+
+
+    # 2) 小车状态进程
     proc_platform.start()
-    # proc_display.start()
+    sdk_platform_status = platform_status_resources['sdk']
+    # while (sdk_platform_status.value == 0):
+    #     print("here")
+    #     time.sleep(1)
+
+    time.sleep(2)# 假装小车运行成功
+
+    # 3) 前端显示进程
+    proc_display.start()
+    proc_display.join()
+
+
+    # TODO 如果用户重启系统。
+
     # # proc_sim_engine.start()
 
     # if proc_server be terminated
     # user kill the server, join end.
-    proc_server.join()
+
+    # if (loc_server_status.value==2):
+    #     loc_manager.set_shutdown()
 
     # sim_manager = BaseManager()
     # sim_manager.register('simulate_map',simulate_map.SimulateMap)

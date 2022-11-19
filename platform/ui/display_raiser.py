@@ -6,7 +6,8 @@ import matplotlib.figure as mplfig
 from matplotlib.patches import Rectangle
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
-import math
+import threading
+import math,copy,json
 import os
 import time
 import matplotlib.animation as animation
@@ -17,6 +18,7 @@ from location.position import Position
 from location.distance import Distance
 
 button_manager={}
+loc_grd_list=[]
 def register_button(button):
     global button_manager
     button_manager[button._name]=button
@@ -27,58 +29,7 @@ def change_button_state(button_name,button_state):
     if button_name in button_manager:
         button_manager[button_name].change_button_state(button_state)
     return
-
-class DispalyResourceManager():
-    def __init__(self) -> None:
-        self._location_server = None
-        # self._button_ui_lock=threading.Lock()
     
-    # declare current location_server is on service
-    def register_location_server(self, location_server):
-        print("Register location_server")
-        self._location_server = location_server
-
-    # flush resources's loc_server
-    # old loc_server shutdown
-    # wait for manager.py raise a new loc_server
-    def shutdown_location_server(self):
-        tmp_server = self._location_server
-        self._location_server = None
-        tmp_server.set_shutdown()
-
-    def get_display_info(self,tag):
-        if (tag=='grd'):
-            return self._location_server.get_grd_display_info(5)
-        else:
-            return self._location_server.get_sim_display_info(5)
-    
-    # None active location server on service now.
-    # Maybe is RESETing..
-    # Can't be porperty [in BaseManager]
-    def location_server_empty(self):
-        return self._location_server is None or self._location_server.is_shutdown()
-
-    def has_location_server(self):
-        return not self.location_server_empty()
-
-    def reset_simulate_position(self):
-        self._location_server.calculater.location_sim.reset()
-        return
-    
-    ##### tkinter's button event processing in sequence
-    ##### so no need additional lock
-    # # get lock without blocking,
-    # # if other button is working, just reject.
-    # @property
-    # def button_is_busy(self):
-    #     get_lock=self._button_ui_lock.acquire(blocking=False)
-    #     return get_lock
-    
-    # # current button working end.
-    # def release_button(self):
-    #     self._button_ui_lock.release()
-    #     return
-
 def button_action_reset():
     global resource_manager,reset_button_status
     print("[Button Click] Location Server reset")
@@ -105,49 +56,6 @@ def reset_sim_env():
     resource_manager.reset_simulate_position()
     return 
 
-
-def create_pos_fig(ax,pos,color = 'b',arrow_color = 'k',
-    marker='o',is_latest=False,aw_len=50):
-    if (ax is None): return 
-    '''
-    return (scatter, arrow) to show a car's position
-    '''
-    # assert(isinstance(pos,Position))
-    x,y,rad = pos['x'],pos['y'],pos['rad']
-    # print("pos = ",pos)
-    dx = aw_len*math.cos(rad)
-    dy = aw_len*math.sin(rad)
-
-    if (not is_latest):
-        color = 'gray'
-        pt = ax.scatter([x],[y],
-                        s=50,c=color,marker=marker,alpha=0.5)
-    else:
-        pt = ax.scatter([x],[y],
-                        s=50,c=color,marker=marker,alpha=0.5)
-        pt_aw =ax.arrow(x,y,dx,dy,color=arrow_color,width=1)
-
-# main
-def raise_loction_display(proc_name,res_manager,button_status):
-    print("Proc [{}] start".format(proc_name))
-    global reset_button_status
-    reset_button_status = button_status
-
-    global resource_manager
-    resource_manager = res_manager
-
-    # global sim_map
-    # sim_map = simulate_map
-    
-    raise_display()
-    
-    while reset_button_status.value!=0:
-        # print("wait for reseted end..",reset_button_status.value)
-        time.sleep(0.5)
-    
-    reset_button_status.value=2
-    resource_manager.shutdown_location_server()
-    print("Proc [{}] end".format(proc_name))
 
 def basic_set(ax,xlim_range,ylim_range,title_str):
     ax.set_xlabel("x")
@@ -188,7 +96,7 @@ def draw_distance_ray(ax,inter_ps,irs_x,irs_y):
         ax.arrow(irs_x,irs_y,p[0]-irs_x,p[1]-irs_y,color=co)
     pass
 
-class PositionCanvas():
+class PositionCanvas:
     _grid_map = 10
     # 窗口本身X行X列：
     # 多1行：上方标题
@@ -200,10 +108,11 @@ class PositionCanvas():
     _map_size = 400
     _map_padxy = _map_size//10
 
-    def __init__(self, window, tag, name, x, y):
+    def __init__(self, window, tag, name, x, y, syncer):
         self._window = window
         self._tag = tag
         self._name = name
+        self._syncer = syncer
 
         self._grid_row = x * self._grid_row_sz
         self._grid_col = y * self._grid_col_sz
@@ -234,65 +143,89 @@ class PositionCanvas():
             sticky="nsew")
         return title
 
-    # def animate(self, i):
-    #     self._line.set_ydata(np.sin(self._x+i/10.0))  # update the data
-    #     self._line.set_color("red" if self._grid_col == 0 else "green")
-    #     self.text_append(str(i))
-    #     return self._line,
+    def _create_pos_fig(self, position_info,
+        color = 'b',arrow_color = 'k',marker='o',
+        is_latest=False,aw_len=50):
 
-    def animate_update_grd(self,fid):
         ax = self._fig_ax
+        x,y,rad = position_info['x'],position_info['y'],position_info['rad']
 
-        global resource_manager
-        if (resource_manager.location_server_empty()): 
-            return
+        '''
+        draw (scatter, arrow) to show a car's position
+        '''
+        # assert(isinstance(pos,Position))
+        # print("pos = ",pos)
+        dx = aw_len*math.cos(rad)
+        dy = aw_len*math.sin(rad)
+
+        if (not is_latest):
+            color = 'gray'
+            pt = ax.scatter([x],[y],
+                            s=50,c=color,marker=marker,alpha=0.5)
         else:
-            change_button_state('location_reset_button','NORMAL')
+            pt = ax.scatter([x],[y],
+                            s=50,c=color,marker=marker,alpha=0.5)
+            pt_aw =ax.arrow(x,y,dx,dy,color=arrow_color,width=1)
+
+    # 使用self._syncer绘制当前位置
+    def _animate_update(self,fid):
+        # print("update")
+        # 获取_syncer信息
+        position_info = copy.deepcopy(self._syncer)
+
+        # 初始化画布
+        self._fig_ax.clear()
+        init_guard_ax_set(ax=self._fig_ax)
+
+        # 绘制当前位置
+        self._create_pos_fig(
+            position_info=position_info,
+            is_latest=True,aw_len=50
+            )
+
+        # TODO 绘制历史位置
+        # for i in range(1,len(loc_list)):
+        #     create_pos_fig(ax,loc_list[i],is_latest=False)
+        # create_pos_fig(ax,position_info,is_latest=True,aw_len=50)
+
+        # 添加文字描述 
+        text = position_info['info']+'\n'+position_info['status']
+        self.text_show(text)
         
-        loc_list = resource_manager.get_display_info("grd")
-
-        ax.clear()
-        init_guard_ax_set(ax)
-
-        for i in range(1,len(loc_list)):
-            create_pos_fig(ax,loc_list[i],is_latest=False)
-        create_pos_fig(ax,loc_list[0],is_latest=True,aw_len=50)
-
-        self.text_show(str(loc_list[0]))
-        
+    # TODO: 之后为虚拟端画图标
     # different from guard, need to build simulate map
-    def animate_update_sim(self,fid):
-        ax = self._fig_ax
+    # def animate_update_sim(self,fid):
+    #     ax = self._fig_ax
 
-        global resource_manager
-        if (resource_manager.location_server_empty()): return
+    #     global resource_manager
+    #     if (resource_manager.location_server_empty()): return
         
-        # get car center
-        loc_list = resource_manager.get_display_info("sim")
-            # location_server.get_sim_display_info(5)
-        ax.clear()
-        init_simulate_ax_set(ax)
+    #     # get car center
+    #     loc_list = resource_manager.get_display_info("sim")
+    #         # location_server.get_sim_display_info(5)
+    #     ax.clear()
+    #     init_simulate_ax_set(ax)
 
-        for i in range(1,len(loc_list)):
-            create_pos_fig(ax,loc_list[i],is_latest=False)
-        create_pos_fig(ax,loc_list[0],is_latest=True,aw_len=50)
+    #     for i in range(1,len(loc_list)):
+    #         create_pos_fig(ax,loc_list[i],is_latest=False)
+    #     create_pos_fig(ax,loc_list[0],is_latest=True,aw_len=50)
 
-        irs_pos = Position(loc_list[0],is_irs_center=False)._calc_sensor_center()
+    #     irs_pos = Position(loc_list[0],is_irs_center=False)._calc_sensor_center()
 
-        # TODO 画传感器辅助线
-        global sim_map
-        status,inter_md_dis,inter_ps = sim_map.get_inter_info()
-        if (status):
-            draw_distance_ray(ax,inter_ps,irs_pos.x,irs_pos.y)
-            F,B,L,R = list(map(int,inter_md_dis[:4]))
-            log = []
-            log.append("F:{}\tB:{}\nL:{}\tR:{}\n".format(
-                F,B,L,R
-            ))
-            log.append(irs_pos.pos_str)
-            self.text_show('\n'.join(log))
+    #     # TODO 画传感器辅助线
+    #     global sim_map
+    #     status,inter_md_dis,inter_ps = sim_map.get_inter_info()
+    #     if (status):
+    #         draw_distance_ray(ax,inter_ps,irs_pos.x,irs_pos.y)
+    #         F,B,L,R = list(map(int,inter_md_dis[:4]))
+    #         log = []
+    #         log.append("F:{}\tB:{}\nL:{}\tR:{}\n".format(
+    #             F,B,L,R
+    #         ))
+    #         log.append(irs_pos.pos_str)
+    #         self.text_show('\n'.join(log))
         
-        # print("sim_ani end")`
+    #     # print("sim_ani end")`
 
     def _create_canvas(self):
         fig = mplfig.Figure()
@@ -315,10 +248,10 @@ class PositionCanvas():
 
         if (self._tag=='grd'):
             self._ani = animation.FuncAnimation(
-            fig, self.animate_update_grd, frames=10)
-        elif (self._tag=='sim'):
-            self._ani = animation.FuncAnimation(
-            fig, self.animate_update_sim, frames=10)
+            fig, self._animate_update, frames=10)
+        # elif (self._tag=='sim'):
+        #     self._ani = animation.FuncAnimation(
+        #     fig, self.animate_update_sim, frames=10)
     
         return canvas, ax
 
@@ -445,10 +378,74 @@ class PlatformEnterButton(PlatformButton):
                           sticky="nsew", padx=20, pady=10)
         return button_entry
 
+def action(ch):
+    global sdk_platform_status,sdk_platform_message,display_platform_message
+    # if (sdk_platform_status.value == 0):
+    #     return
+
+    global action_can_do
+    if (not action_can_do):
+        get=None
+        try:
+            get = display_platform_message.get_nowait()
+        except Exception as e:
+            pass
+        if (get):
+            print("last action finished")
+            action_can_do = True
+    
+    if (not action_can_do): 
+        print("reject")
+        return
+
+    action_json={
+        'type':'ACTION',
+        'info':{
+            'api_version':'DJI',
+            'api_info':ch
+        }
+    }
+
+    action_json_str = json.dumps(action_json)
+    print(action_json_str)
+
+    sdk_platform_message.put(action_json)
+    action_can_do=False
+
+    return
+
+def init_end():
+    global sdk_platform_status,sdk_platform_message
+    # if (sdk_platform_status.value == 0):
+    #     return
+    
+    action_json={
+        'type':'SYSTEM_STATUS',
+        'info':{
+            'status':'init_success',
+        }
+    }
+
+    # action_json_str = json.dumps(action_json)
+    # print(action_json_str)
+
+    sdk_platform_message.put(action_json)
+    return
+
+def action_L():
+    action('L')
+
+def action_r():
+    action('r')
+
+def action_F():
+    action('F')
+
 def my_root_window_set():
     # name
     root_window = tk.Tk()
     root_window.title('CPS-CPS platform')
+
     # size
     # root_window.geometry('900x600')
 
@@ -459,12 +456,25 @@ def my_root_window_set():
 
     return root_window
 
-# main function
-def raise_display():
+def create_display(
+        platform_status_resources,
+        platform_message_resources,
+        platform_socket_address):
+    # 获取必要的资源
+    grd_location_syncer = platform_message_resources['grd_position']
+    sim_location_syncer = platform_message_resources['sim_position'] 
+
+    global sdk_platform_status,sdk_platform_message,display_platform_message
+    display_platform_message = platform_message_resources['display']
+    sdk_platform_status = platform_status_resources['sdk']
+    sdk_platform_message = platform_message_resources['sdk']
+
     # 调用Tk()创建主窗口
     root_window = my_root_window_set()
 
-    grd_canvas = PositionCanvas(root_window, "grd", "Guard Position", 0, 0)
+    grd_canvas = PositionCanvas(window = root_window,
+        tag="grd", name = "Guard Position", x=0, y=0,
+        syncer= grd_location_syncer)
     # sim_canvas = PositionCanvas(root_window, "sim", "Simulate Position", 0, 1)
 
     # global resource_manager
@@ -481,6 +491,29 @@ def raise_display():
     #     root_window, "usr_program_upload_button", "用户程序上传")
     # register_button(usr_program_upload_button)
 
+    global action_can_do
+    action_can_do=True
+
+    dji_sdk_L_button = PlatformActionButton(
+        root_window, "dji_sdk_L_button", "大疆sdk调用-L", "")
+    dji_sdk_L_button._bind_action(action_L)
+    register_button(dji_sdk_L_button)
+
+    dji_sdk_r_button = PlatformActionButton(
+        root_window, "dji_sdk_r_button", "大疆sdk调用-r", "")
+    dji_sdk_r_button._bind_action(action_r)
+    register_button(dji_sdk_r_button)
+
+    dji_sdk_F_button = PlatformActionButton(
+        root_window, "dji_sdk_F_button", "大疆sdk调用-F", "")
+    dji_sdk_F_button._bind_action(action_F)
+    register_button(dji_sdk_F_button)
+
+    dji_sdk_init_end_button = PlatformActionButton(
+    root_window, "dji_init_end_button", "大疆初始化结束", "")
+    dji_sdk_init_end_button._bind_action(init_end)
+    register_button(dji_sdk_init_end_button)
+
     # sim_env_reset_button_status = PlatformActionButton(
     #     root_window, "sim_env_reset_button_status", "虚拟环境初始化", "")
     # sim_env_reset_button_status._bind_action(reset_sim_env)
@@ -493,3 +526,26 @@ def raise_display():
 
     # 开启主循环，让窗口处于显示状态
     root_window.mainloop()
+
+# main
+def raiser(
+    proc_name,
+    platform_status_resources,
+    platform_message_resources,
+    platform_socket_address):
+
+    print("Proc [{}] start".format(proc_name))
+
+    display_status = platform_status_resources['display']
+
+    create_display(
+        platform_status_resources,
+        platform_message_resources,
+        platform_socket_address)
+
+    location_server_status = platform_status_resources['location']
+    location_server_status.value = 1
+    while (location_server_status.value != 0):
+        time.sleep(1)
+
+    print("Proc [{}] end".format(proc_name))

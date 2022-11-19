@@ -5,7 +5,7 @@ from . import position_config as pc
 from .position_config import ActionState, ActionAnalysis
 from .position import Position
 
-from .fixed_size_queue import FixedSizeQueue
+from .location_queue import FixedSizeQueue
 
 
 class MotionQueue(FixedSizeQueue):
@@ -14,7 +14,7 @@ class MotionQueue(FixedSizeQueue):
 
     def analysis(self,msg=None):
         if (self.is_empty): 
-            print("ActionAnalysis = EMPTY")
+            # print("ActionAnalysis = EMPTY")
             return ActionAnalysis.EMPTY
         average_motion = [0,0,0]
         for mot in self._queue:

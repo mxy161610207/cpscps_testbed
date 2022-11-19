@@ -4,11 +4,13 @@ import queue
 import threading
 import time
 
-from . import location_list
 from .location_config import SystemState
+from .location_list import LocationList
 
 class LocationCalculater:
-    def __init__(self,server):
+    def __init__(self,
+        server, grd_location_syncer, sim_location_syncer
+        ):
         print("__init__ LocationCalculater start")
         self.system_state=SystemState.INIT
 
@@ -21,15 +23,15 @@ class LocationCalculater:
         self.server = server
         self.bind_map = None
 
-        self.location_grd = location_list.LocationList(200,name='Guard',need_sim_pair=True)
-        self.location_sim = self.location_grd._sim_pair
+        self.location_grd = LocationList(200,name='Guard',syncer=grd_location_syncer)
+        self.location_sim = LocationList(200,name='Simulate',syncer=sim_location_syncer)
+        LocationList.make_pair(self.location_grd, self.location_sim)
 
-        print("self.location_grd size =",self.location_grd.size)
-        print("self.location_sim size =",self.location_sim.size)
+        # print("self.location_grd size =",self.location_grd.size)
+        # print("self.location_sim size =",self.location_sim.size)
 
         self.update_lock = threading.Lock()
         self.need_recover = False
-
 
         self.location_log = queue.Queue(2000)
 
@@ -47,7 +49,6 @@ class LocationCalculater:
     def _location_update(self):
         while True:
             recv_json = self.info_queue.get()
-           
             self.system_update(recv_json)
             
             #todo if has simulate map update
@@ -236,5 +237,4 @@ class LocationCalculater:
             }
         }
         self.server._send_msg_queue.put(reply_json)
-
-
+    

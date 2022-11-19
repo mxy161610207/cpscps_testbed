@@ -2,7 +2,7 @@ import robomaster.gimbal as offical
 from robomaster.gimbal import *
 
 from robomaster import dds
-import user_watcher
+from module import sdk_handler
 
 '''
 class GimbalPosSubject(dds.Subject):
@@ -13,7 +13,7 @@ def usr_data_info(self):
     usr_data_info 根据虚拟端在线情况，返回真实值or虚拟值
     """
     data_source = None
-    return user_watcher.SIMULATE_MSG.get_angle()
+    return sdk_handler.SIMULATE_MSG.get_angle()
 #     if platform.is_online():
 #         data_source =  platform.SIMULATE_MSG
 #     else:
@@ -29,7 +29,7 @@ def sys_sub_handler(self, sub_info):
         真实角度传感器 sys_sub 的callback函数
         将真实测距值发送给server
         """
-        user_watcher.PHY_SENDER.set_angle_data_info(sub_info)
+        sdk_handler.PHY_SENDER.set_angle_data_info(sub_info)
         pass
 
 def sys_sub(self, *args, **kw):
@@ -51,7 +51,7 @@ def sys_sub(self, *args, **kw):
         :return:  bool: 数据订阅结果
         """
         print("开启platfrom订阅: gimbal")
-        user_watcher.PHY_INFO.angle_init_once = False
+        sdk_handler.PHY_INFO.angle_init_once = False
         
         sub = self._robot.dds
         subject = offical.GimbalPosSubject()

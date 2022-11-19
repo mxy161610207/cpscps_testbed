@@ -1,3 +1,5 @@
+from .candidate import PositionCands
+
 class FixedSizeQueue:
     def __init__(self,size=3) -> None:
         self._queue = []
@@ -38,5 +40,21 @@ class FixedSizeQueue:
         self._queue.clear()
         self._size=0
 
+class LocationQueue(FixedSizeQueue):
+    def __init__(self, size=200) -> None:
+        super().__init__(size)
+        self._sync_queue = None
 
-    
+    def put(self,elem):
+        assert(isinstance(elem,PositionCands))
+        super().put(elem)
+
+    def peek(self,sz):
+        sz = min(sz,self.size)
+        l = []
+        for i in range(1,sz+1):
+            pc = self._loc_queue._queue[-i]
+            assert(isinstance(pc,PositionCands))
+            
+            l.append(pc._pos._calc_car_center().dict_style)
+        return l
