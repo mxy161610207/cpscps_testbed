@@ -13,5 +13,7 @@
 # platform 启动模块
 !platform/*.py
 
+# 文档说明
+!doc/
 
 
