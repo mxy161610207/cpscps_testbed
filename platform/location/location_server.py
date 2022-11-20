@@ -9,7 +9,6 @@ import queue
 from .location_calculater import LocationCalculater
 from .location_config import OUTPUT_DIR
 
-
 class LocationServer:
     def __init__(self,
         grd_location_syncer,sim_location_syncer,
@@ -36,11 +35,7 @@ class LocationServer:
         print("__init__ LocationServer end")
 
     def is_shutdown(self):
-        return self._shutdown
-
-    def set_shutdown(self):
-        print("set status shutdown")
-        self._shutdown = True
+        return self._shutdown or self._status.value == -1
 
     # def get_grd_display_info(self,sz=5):
     #     loc_list = self.calculater.location_grd
@@ -82,7 +77,12 @@ class LocationServer:
         while True:
             if (self.is_shutdown()): break
 
-            recv_info, recv_addr = self.server_socket.recvfrom(1024)
+            try:
+                recv_info, recv_addr = self.server_socket.recvfrom(1024)
+            except Exception as e:
+                print("[location_server error] recv failed")
+                break
+
             if recv_addr!= self._reply_addr:
                 print("[drop] recv addr {} not match {}".format(
                     recv_addr, self._reply_addr))
@@ -92,6 +92,8 @@ class LocationServer:
 
             recv_json = json.loads(recv_info)
             self.handle_msg(recv_json)
+        
+        if (not self.is_shutdown()): self._status.value == -1
 
     def send_msg(self):
         # while true - send message
@@ -108,9 +110,11 @@ class LocationServer:
                 self.server_socket.sendto(send_msg.encode(
                     self._code_mode), self._reply_addr)
             except Exception as e:
-                print(e)
-                print("[connected error] location server send failed")
-                self._shutdown = True
+                print("[location_server error] send failed")
+                break
+        
+        if (not self.is_shutdown()): self._status.value == -1
+
 
     def make_sync_reply(self, sync_json):
         qid = sync_json['term_id']
@@ -146,6 +150,19 @@ class LocationServer:
     #     self.calculater.bind_map = simulate_map
     #     self.calculater.bind_map_update()
 
+def closer(
+    platform_status_resources,
+    platform_message_resources,
+    platform_socket_address):
+
+    location_server_status = platform_status_resources['location']
+
+    if (location_server_status.value == -1):
+        return
+
+    location_server_status.value = -1
+
+    return
 
 def raiser(
         proc_name,
@@ -172,6 +189,9 @@ def raiser(
         location_server_addr, physical_sender_addr)
     loc_server.start_udp_server()
 
-    location_server_status.value = 0
+    # 如果服务器停止运行，说明 location_server_status.value == -1
+    # 此时其他模块需要退出
+    global_status = platform_status_resources['global']
+    global_status.value = -1
 
     print("Proc [{}] end".format(proc_name))

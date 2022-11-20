@@ -40,6 +40,22 @@ def create_car_handler(location_server_addr,physical_sender_addr):
     return
 
 
+def closer(
+    platform_status_resources,
+    platform_message_resources,
+    platform_socket_address):
+
+    close_json={
+        'type':'SYSTEM_STATUS',
+        'info':{
+            'status':'shutdown',
+        }
+    }
+    
+    sdk_platform_message = platform_message_resources['sdk']
+    sdk_platform_message.put(json.dumps(close_json))
+    return
+
 def raiser(
     proc_name, 
     platform_status_resources,
@@ -47,28 +63,43 @@ def raiser(
     platform_socket_address):
 
     print("Proc [{}] start".format(proc_name))
+    
+    global_status = platform_status_resources['global']
+    
 
     sdk_platform_status = platform_status_resources['sdk']
     sdk_platform_message = platform_message_resources['sdk']
 
-    display_platform_message = platform_message_resources['display']
+    controller_message = platform_message_resources['control']
 
     physical_sender_addr = platform_socket_address['phy_sender']
     # simluate_sender_addr = platform_socket_address['sdk']
     location_server_addr = platform_socket_address['location']
 
+    
+    # grd_location_syncer = platform_message_resources['grd_position']
+
+    real_car = False
+
     if sdk_platform_status.value == 0:
-        time.sleep(4)
-        # create_car_handler(location_server_addr,physical_sender_addr)
+        if real_car:
+            create_car_handler(location_server_addr,physical_sender_addr)
+        else:
+            time.sleep(4)
+        
         sdk_platform_status.value = 1
 
-    while True:
-        # if (sdk_platform_status.value==3):
-        #     continue
+    
+    global CAR_HANDLER
 
-        # action_json_str = sdk_platform_message.get()
-        # action_json = json.loads(action_json_str)
-        action_json = sdk_platform_message.get()
+    while True:
+        action_json_str = sdk_platform_message.get()
+        action_json = json.loads(action_json_str)
+
+        if (global_status.value == -1):
+            break
+        
+        print("get {}".format(action_json_str))
 
         action_type, action_info = action_json['type'], action_json['info']
 
@@ -76,36 +107,59 @@ def raiser(
             if (action_info['status'] == 'init_success'):
                 sdk_platform_status.value = 2
 
-                global PHY_SENDER
-                PHY_SENDER.location_server_reset()
-                pos = PHY_SENDER.query_position()
-                print("init = ({:.3f},{:.3f}) deg = {:.3f}".
-                      format(pos['x'], pos['y'], pos['deg']))
+                if real_car:
+                    global PHY_SENDER
+                    PHY_SENDER.location_server_reset()
+                    pos = PHY_SENDER.query_position()
+                    print("init = ({:.3f},{:.3f}) deg = {:.3f}".
+                        format(pos['x'], pos['y'], pos['deg']))
+                else:
+                    time.sleep(2)
+                    pass
+
+                controller_message.put("init_success")
+                
                 pass
 
             elif (action_info['status'] == 'shutdown'):
+                global_status.value == -1
                 break
 
         elif action_type == 'ACTION':
             if action_info['api_version'] == 'DJI':
                 if (sdk_platform_status.value != 1):
-                    raise PlatformException(
-                        "sdk_platform_status = {}, but run DJI sdk".format(
+                    print("sdk_platform_status = {}, but run USER sdk".format(
                             sdk_platform_status.value))
+                    raise PlatformException("")
 
                 action = action_info['api_info']
-                global CAR_HANDLER
-                # CAR_HANDLER.do_action(action)
-                time.sleep(3)
-                print("success now\n"*10)
-                display_platform_message.put("success")
+
+                if real_car:
+                    CAR_HANDLER.do_action(action)
+                else:
+                    time.sleep(2)
+                    pass
+
+                controller_message.put("dji_action_success")
 
             elif action_info['api_version'] == 'USER':
                 if (sdk_platform_status.value != 2):
-                    raise PlatformException(
-                        "sdk_platform_status = {}, but run USER sdk".format(
+                    print("sdk_platform_status = {}, but run DJI sdk".format(
                             sdk_platform_status.value))
+                    raise PlatformException("")
 
+                action = action_info['api_info']
+                if real_car:
+                    CAR_HANDLER.do_usr_action(action)
+                else:
+                    # for _ in range(20):
+                    #     grd_location_syncer['y']+=20
+                    #     time.sleep(0.5)
+                    time.sleep(2)
+                    pass
+                
+                
+                controller_message.put("usr_action_success")
                 # TODO
                 pass
 
@@ -113,12 +167,12 @@ def raiser(
             if action_info['sensor_module'] == 'ir_sensor':
                 # TODO
                 pass
-        
+    
+    # 如果sdk不再运行，其他模块也需要退出
+    global_status = platform_status_resources['global']
+    global_status.value = -1
         
     print("Proc [{}] end".format(proc_name))
-
-
-
 
 
 

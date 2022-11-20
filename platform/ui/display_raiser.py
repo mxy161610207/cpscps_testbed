@@ -378,69 +378,6 @@ class PlatformEnterButton(PlatformButton):
                           sticky="nsew", padx=20, pady=10)
         return button_entry
 
-def action(ch):
-    global sdk_platform_status,sdk_platform_message,display_platform_message
-    # if (sdk_platform_status.value == 0):
-    #     return
-
-    global action_can_do
-    if (not action_can_do):
-        get=None
-        try:
-            get = display_platform_message.get_nowait()
-        except Exception as e:
-            pass
-        if (get):
-            print("last action finished")
-            action_can_do = True
-    
-    if (not action_can_do): 
-        print("reject")
-        return
-
-    action_json={
-        'type':'ACTION',
-        'info':{
-            'api_version':'DJI',
-            'api_info':ch
-        }
-    }
-
-    action_json_str = json.dumps(action_json)
-    print(action_json_str)
-
-    sdk_platform_message.put(action_json)
-    action_can_do=False
-
-    return
-
-def init_end():
-    global sdk_platform_status,sdk_platform_message
-    # if (sdk_platform_status.value == 0):
-    #     return
-    
-    action_json={
-        'type':'SYSTEM_STATUS',
-        'info':{
-            'status':'init_success',
-        }
-    }
-
-    # action_json_str = json.dumps(action_json)
-    # print(action_json_str)
-
-    sdk_platform_message.put(action_json)
-    return
-
-def action_L():
-    action('L')
-
-def action_r():
-    action('r')
-
-def action_F():
-    action('F')
-
 def my_root_window_set():
     # name
     root_window = tk.Tk()
@@ -459,7 +396,9 @@ def my_root_window_set():
 def create_display(
         platform_status_resources,
         platform_message_resources,
-        platform_socket_address):
+        platform_socket_address,
+        exit_func
+        ):
     # 获取必要的资源
     grd_location_syncer = platform_message_resources['grd_position']
     sim_location_syncer = platform_message_resources['sim_position'] 
@@ -491,28 +430,28 @@ def create_display(
     #     root_window, "usr_program_upload_button", "用户程序上传")
     # register_button(usr_program_upload_button)
 
-    global action_can_do
-    action_can_do=True
+    # global action_can_do
+    # action_can_do=True
 
-    dji_sdk_L_button = PlatformActionButton(
-        root_window, "dji_sdk_L_button", "大疆sdk调用-L", "")
-    dji_sdk_L_button._bind_action(action_L)
-    register_button(dji_sdk_L_button)
+    # dji_sdk_L_button = PlatformActionButton(
+    #     root_window, "dji_sdk_L_button", "大疆sdk调用-L", "")
+    # dji_sdk_L_button._bind_action(action_L)
+    # register_button(dji_sdk_L_button)
 
-    dji_sdk_r_button = PlatformActionButton(
-        root_window, "dji_sdk_r_button", "大疆sdk调用-r", "")
-    dji_sdk_r_button._bind_action(action_r)
-    register_button(dji_sdk_r_button)
+    # dji_sdk_r_button = PlatformActionButton(
+    #     root_window, "dji_sdk_r_button", "大疆sdk调用-r", "")
+    # dji_sdk_r_button._bind_action(action_r)
+    # register_button(dji_sdk_r_button)
 
-    dji_sdk_F_button = PlatformActionButton(
-        root_window, "dji_sdk_F_button", "大疆sdk调用-F", "")
-    dji_sdk_F_button._bind_action(action_F)
-    register_button(dji_sdk_F_button)
+    # dji_sdk_F_button = PlatformActionButton(
+    #     root_window, "dji_sdk_F_button", "大疆sdk调用-F", "")
+    # dji_sdk_F_button._bind_action(action_F)
+    # register_button(dji_sdk_F_button)
 
-    dji_sdk_init_end_button = PlatformActionButton(
-    root_window, "dji_init_end_button", "大疆初始化结束", "")
-    dji_sdk_init_end_button._bind_action(init_end)
-    register_button(dji_sdk_init_end_button)
+    # dji_sdk_init_end_button = PlatformActionButton(
+    # root_window, "dji_init_end_button", "大疆初始化结束", "")
+    # dji_sdk_init_end_button._bind_action(init_end)
+    # register_button(dji_sdk_init_end_button)
 
     # sim_env_reset_button_status = PlatformActionButton(
     #     root_window, "sim_env_reset_button_status", "虚拟环境初始化", "")
@@ -524,8 +463,40 @@ def create_display(
     quit_button._bind_action(root_window.destroy)
     register_button(quit_button)
 
+    # 注册退出函数，方便外部的程序结束窗口
+    exit_func.append(root_window.destroy)
+
     # 开启主循环，让窗口处于显示状态
+    display_status = platform_status_resources['display']
+    display_status.value = 1
+
     root_window.mainloop()
+    # 用户按下quit_button后退出
+
+def window_outside_exiter(display_status,exit_func):
+    while True:
+        if display_status.value!=-1:
+            time.sleep(2)
+        
+        else:
+            while (len(exit_func)==0):
+                time.sleep(1)
+            exit_func[0]()
+            break
+
+def closer(
+    platform_status_resources,
+    platform_message_resources,
+    platform_socket_address):
+
+    display_status = platform_status_resources['display']
+
+    # 自己就是退出者
+    if display_status.value == -1:
+        return
+    
+    # 设置之后 window_outside_exiter 会结束 root_window.mainloop()
+    display_status.value = -1
 
 # main
 def raiser(
@@ -536,16 +507,24 @@ def raiser(
 
     print("Proc [{}] start".format(proc_name))
 
+    # 外部结束界面
+    exit_func = []
     display_status = platform_status_resources['display']
+    t_closer = threading.Thread(
+        target=window_outside_exiter, 
+        args=(display_status,exit_func))
+    t_closer.daemon = True
+    t_closer.start()
+
+    display_status.value = 0
 
     create_display(
         platform_status_resources,
         platform_message_resources,
-        platform_socket_address)
+        platform_socket_address,
+        exit_func)
 
-    location_server_status = platform_status_resources['location']
-    location_server_status.value = 1
-    while (location_server_status.value != 0):
-        time.sleep(1)
+    global_status = platform_status_resources['global']
+    global_status.value = -1
 
     print("Proc [{}] end".format(proc_name))

@@ -156,4 +156,35 @@ class RoboMasterEPWrapper:
         else:
             pass
         
+        print("[sdk_handler] dji action success")
 
+    def do_usr_action(self,action,move_dis=0.5,rot_deg=45,mute=False):
+        ep_chassis=self._robomaster_ep.chassis
+        
+        xy_speed=0.3
+        z_speed=60
+        if (action == 'W'):
+            ep_chassis.move(move_dis,0,0,xy_speed,z_speed).wait_for_completed()
+        elif (action == 'S'):
+            ep_chassis.move(-move_dis,0,0,xy_speed,z_speed).wait_for_completed()
+        elif (action == 'A'):
+            ep_chassis.move(0,-move_dis,0,xy_speed,z_speed).wait_for_completed()
+        elif (action == 'D'):
+            ep_chassis.move(0,move_dis,0,xy_speed,z_speed).wait_for_completed()
+        elif (action == 'L'):
+            ep_chassis.move(0,0,rot_deg,xy_speed,z_speed).wait_for_completed()
+        elif (action == 'R'):
+            ep_chassis.move(0,0,-rot_deg,xy_speed,z_speed).wait_for_completed()
+        elif (action == 'l'):
+            ep_chassis.move(0,0,10,xy_speed,z_speed).wait_for_completed()
+        elif (action == 'r'):
+            ep_chassis.move(0,0,-10,xy_speed,z_speed).wait_for_completed()
+        elif (action == 'w'):
+            ep_chassis.move(0.1,0,0,xy_speed,z_speed).wait_for_completed()
+        elif (action == 'B'):
+            ep_chassis.move(0,0,180*self._rot_flip,xy_speed,z_speed).wait_for_completed()
+            self._rot_flip=-self._rot_flip
+        else:
+            pass
+        
+        print("[sdk_handler] usr action success")

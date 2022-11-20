@@ -12,9 +12,11 @@ platform_status_resources = {}
 platform_message_resources = {}
 platform_socket_address = {
     'phy_sender': ('127.0.0.1', 41997),
-    'sdk' : ('127.0.0.1', 41011),
+    'sdk' : ('127.0.0.1', 41011), # 暂时不用
     'location': ('127.0.0.1', 41234),
 }
+
+platform_status_resources['global'] = Value('i',0)
 
 # --- 定位系统工具 ---
 platform_status_resources['location'] = Value('i',0)
@@ -26,23 +28,47 @@ platform_message_resources['sim_position'] = platform_manager.dict()
 platform_status_resources['sdk'] = Value('i',0)
 platform_message_resources['sdk'] = Queue(-1)
 
+# --- 平台前端工具 ---
+platform_status_resources['display'] = Value('i',0)
+platform_message_resources['display'] = Queue(-1)
 
-# use ---------------------------
-# 1)
+# --- 用户操控工具 ---
+platform_status_resources['control'] = Value('i',0)
+platform_message_resources['control'] = Queue(-1)
+```
+
+### 变量命名
+
+```python
+# 传参后，规范变量名方式---------------------------
+# socket
 physical_sender_addr = platform_socket_address['phy_sender']
 location_server_addr = platform_socket_address['location']
 
-# 3) sdk
+# global status
+global_status = platform_status_resources['global']
+
+# 1) location
+location_server_status = platform_status_resources['location']
+location_server_message = platform_message_resources['location']
+
+grd_location_syncer = platform_message_resources['grd_position']
+sim_location_syncer = platform_message_resources['sim_position'] 
+
+# 2) sdk
 sdk_platform_status = platform_status_resources['sdk']
 sdk_platform_message = platform_message_resources['sdk']
 
-# simluate_sender_addr = platform_socket_address['sdk']
+# 3) display
+display_status = platform_status_resources['display']
+display_message = platform_message_resources['display']
 
+# 4) controller
+controller_status = platform_status_resources['control']
+controller_message = platform_message_resources['control']
 ```
 
-
-
-显示syncer格式
+### syncer的显示格式
 
 ```python
 {
@@ -55,47 +81,78 @@ sdk_platform_message = platform_message_resources['sdk']
 }
 ```
 
+### status 各模块值说明
 
-
-
-
----
-
-
-
-
-
-## 平台模块status值说明
-
-### location_server_status
+#### global_status
 
 ```python
-platform_status_resources['location'] = Value('i',0)	
+global_status = platform_status_resources['global']
+```
+
+| .value == ? | 说明     | 动作 |
+| ----------- | -------- | ---- |
+| -1          | 全局退出 | 退出 |
+| 0           | 正常运行 | 无   |
+
+
+
+#### location_server_status 定位模块状态
+
+```python
 location_server_status = platform_status_resources['location']
 ```
 
-| .value == ? | 说明     | 动作              |      |
-| ----------- | -------- | ----------------- | ---- |
-| 0           | 无服务器 | raiser 创建服务器 |      |
-| 1           | 正常工作 | 无                |      |
-| 2           | 重启中   | 无                |      |
-| 3           | 关闭中   | 无                |      |
+| .value == ? | 说明     | 动作              |
+| ----------- | -------- | ----------------- |
+| -1          | 全局退出 | 退出              |
+| 0           | 无服务器 | raiser 创建服务器 |
+| 1           | 正常工作 | 无                |
 
 
 
-### sdk_platform_status 小车平台状态
+#### sdk_platform_status 小车连接状态
 
 ```python
-platform_status_resources['sdk'] = Value('i',0)	
 sdk_platform_status = platform_status_resources['sdk']
 ```
 
-| .value == ? | 说明         | 动作                          |      |
-| ----------- | ------------ | ----------------------------- | ---- |
-| 0           | 无小车连接   | 连接EP小车                    |      |
-| 1           | 小车未初始化 | 接受DJI动作，并初始化小车定位 |      |
-| 2           | 平台空闲     | 等待用户API调用，USER         |      |
-| 3           | 平台忙碌     | 挂起                          |      |
+| .value == ? | 说明         | 动作                          |
+| ----------- | ------------ | ----------------------------- |
+| 0           | 无小车连接   | 连接EP小车                    |
+| 1           | 小车未初始化 | 接受DJI动作，并初始化小车定位 |
+| 2           | 平台空闲     | 接受USER动作，并调用对应API   |
+| 3           | 平台忙碌     | 挂起                          |
+
+
+
+#### display 显示面板状态
+
+```python
+display_status = platform_status_resources['display']
+```
+
+| .value == ? | 说明     | 动作 |
+| ----------- | -------- | ---- |
+| -1          | 全局退出 | 退出 |
+| 0           | 正常运行 | 无   |
+
+
+
+#### controller 触控面板状态
+
+```python
+controller_status = platform_status_resources['control']
+```
+
+| .value == ? | 说明       | 动作                           |
+| ----------- | ---------- | ------------------------------ |
+| 0           | 无控制面板 | 等待控制面板创建               |
+| 1           | 空闲       | 等待按钮发送控制指令           |
+| 2           | 按钮作用   | 已有指令运行，拒绝其他控制指令 |
+| -1          | 退出       | 关闭其他面板                   |
+
+
+
 
 ---
 
