@@ -79,7 +79,7 @@ def raiser(
     
     # grd_location_syncer = platform_message_resources['grd_position']
 
-    real_car = False
+    real_car = True
 
     if sdk_platform_status.value == 0:
         if real_car:

@@ -5,13 +5,13 @@
 !.gitignore
 !README.md
 
-# platform/
-!platform/
+# testbed_platform/
+!testbed_platform/
 **/__pycache__
 **/log
 
-# platform 启动模块
-!platform/*.py
+# testbed_platform 启动模块
+!testbed_platform/*.py
 
 # 文档说明
 !doc/
