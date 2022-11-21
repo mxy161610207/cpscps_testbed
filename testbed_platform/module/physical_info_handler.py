@@ -100,7 +100,10 @@ class PhysicalInfoHandler(SensorSourceHandler):
         F,R,B,L = cur_distance
         min_distance = min(cur_distance)
         #error here
-        stop_tag=self.security_monitor.check_is_trigger(min_distance)
+        # print(1)
+        security_monitor = self._car_handler._security_monitor
+        stop_tag=security_monitor.check_is_trigger(min_distance)
+        # print(2)
 
         sensor_json={
             'type':'SENSOR_TYPE',
@@ -118,7 +121,7 @@ class PhysicalInfoHandler(SensorSourceHandler):
         if stop_tag:
             print("stop tag",sensor_json)
             # TODO
-            self._car_handler._security_monitor.load_trigger_json(sensor_json)
+            security_monitor.load_trigger_json(sensor_json)
         return 
 
     def set_angle_data_info(self, data_info):
@@ -171,7 +174,7 @@ class PhysicalInfoHandler(SensorSourceHandler):
         system_json={
             'type':'SYSTEM_TYPE',
             'info':{
-                'next_state': SystemState.INIT.name
+                'next_state': SystemState.NORMAL.name
             }
         }
         self.angle_init_once = False

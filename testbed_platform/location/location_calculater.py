@@ -80,16 +80,17 @@ class LocationCalculater:
 
     def switch_system_state(self,next_state:SystemState):
         if next_state==SystemState.ADJUST:
-            if (self.state!=SystemState.NORMAL and self.state!=SystemState.ADJUST):
-                raise Exception("{} cannot convert to {}".format(self.state,next_state))
+            if (self.system_state!=SystemState.NORMAL and self.system_state!=SystemState.ADJUST):
+                raise Exception("{} cannot convert to {}".format(self.system_state,next_state))
         elif next_state==SystemState.NORMAL:
-            if (self.state!=SystemState.ADJUST and self.state!=SystemState.INIT):
-                raise Exception("{} cannot convert to {}".format(self.state,next_state))
+            # if (self.system_state!=SystemState.ADJUST and self.system_state!=SystemState.INIT):
+            #     raise Exception("{} cannot convert to {}".format(self.system_state,next_state))
+            pass
         elif next_state == SystemState.INIT:
             self.location_grd.reset()
             if (self.location_sim): self.location_sim.reset()
 
-        self.state = next_state
+        self.system_state = next_state
 
     def get_sensor_group(self):
         sensor_data = [0,0,0,0]
@@ -121,12 +122,13 @@ class LocationCalculater:
             return 
 
         elif data_type == "SENSOR_TYPE":
+            # print(recv_json)
             # 1) get 4 sensor
             sensor_info = [int(x) for x in info['sensor_info']]
             # 2) if has tag
             need_location = info['need_location']
             # 3) get send timestamp
-            send_time = recv_json['time']
+            send_time = recv_json['send_time']
 
             if (need_location):
                 print("[SNAPSHOT] need location_grd\n"*10)         
@@ -174,7 +176,7 @@ class LocationCalculater:
             return 
 
         elif data_type == "QUERY":
-            print("[QUERY] need location_grd\n"*10)
+            print("[QUERY] need location_grd\n"*1)
             # TODO set an threading reply by the first unmovable
             query_type = info['query_type']
             if (query_type=='position'):

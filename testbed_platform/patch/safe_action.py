@@ -87,11 +87,11 @@ class SafeChassisMoveAction(action.Action):
         # print("old_pos = {:.3f} {:.3f} deg = {:.3f}".format(old_pos[0],old_pos[1],old_pos[2]))
         # print("new_pos = {:.3f} {:.3f} deg = {:.3f}".format(new_pos[0],new_pos[1],new_pos[2]))
 
-        det_x = new_pos[0]-old_pos[0]
-        det_y = new_pos[1]-old_pos[1]
-        det_deg = new_pos[2]-old_pos[2]
+        det_x = new_pos['x']-old_pos['x']
+        det_y = new_pos['y']-old_pos['y']
+        det_deg = new_pos['deg']-old_pos['deg']
 
-        rad = math.radians(old_pos[2])
+        rad = math.radians(old_pos['deg'])
         dx,dy = ActionMonitor._after_rot_matrix(-rad,det_x,det_y)
 
         # motion = (dx*0.001,dy*0.001,det_deg)

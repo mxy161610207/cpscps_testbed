@@ -63,7 +63,7 @@ class DJIControllerPanel():
         row,col=3,3
         button_name_list=[
             ['小左转','刷新','小右转'],
-            ['左转90','前进','右转90'],
+            ['左转45','前进','右转45'],
             ['左移','后退','右移'],
         ]
         button_code_list=[
@@ -295,7 +295,7 @@ def action_json_sender(action_json):
     global sdk_platform_message
 
     action_json_str = json.dumps(action_json)
-    print("send {}".format(action_json_str))
+    # print("send {}".format(action_json_str))
     update_controller_status(controller_status,2)
     sdk_platform_message.put(action_json_str)
 
@@ -326,7 +326,7 @@ def flush_controller_status(controller_status,controller_message):
         get = controller_message.get()
         if isinstance(get,str):
             # "init_success","action_success"
-            print("get {}",get)
+            # print("get {}".format(get))
             update_controller_status(controller_status, 1)
             if get=='init_success':
                 # 按钮有效性交换

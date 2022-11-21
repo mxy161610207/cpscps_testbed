@@ -51,10 +51,12 @@ class SensorSourceSender:
     # 线程 - While True 一直接受消息
     def recv_msg(self):
         # 先测试这个接口是否是有效接口
-        while not self._manager.send_server_sync_json(is_reset=True):
-            time.sleep(1)
-        
-        print('服务器已相应(addr)=',self._server_addr)
+        # while not self._manager.send_server_sync_json(is_reset=True):
+        #     time.sleep(1)
+
+        print('[sdk] recv_msg 进程已启动, bind {}, recv_from {}'.format(
+            self._client_addr,self._server_addr))
+
         while True:
             try:
                 recv_info, _ = self.server_socket.recvfrom(1024)
@@ -63,8 +65,8 @@ class SensorSourceSender:
                 print('远程主机已关闭 (addr)=',self._server_addr)
                 break
             recv_info = recv_info.decode('utf-8')
-            # print("[{2}] {0} \t  服务器端消息：{1}".format(
-            #       time.asctime(time.localtime()), recv_info,self._server_addr))
+            # print("[sdk recv] {0} \t  服务器端消息：{1}".format(
+            #       time.asctime(time.localtime()), recv_info))
 
             if (recv_info=='quit'):break
             if (recv_info=='ack'):continue

@@ -91,6 +91,8 @@ class LocationServer:
             print(recv_info, file=self.log)
 
             recv_json = json.loads(recv_info)
+            # if recv_json['type']!='ANGLE_TYPE':
+            #     print(recv_json)
             self.handle_msg(recv_json)
         
         if (not self.is_shutdown()): self._status.value == -1
@@ -105,7 +107,8 @@ class LocationServer:
             send_msg = json.dumps(send_json)
 
             # print(msg)
-            print("#"+send_msg, file=self.log)
+            print("[location] reply"+send_msg, file=self.log)
+            # print("[location] reply to {} | msg={}".format(self._reply_addr,send_msg))
             try:
                 self.server_socket.sendto(send_msg.encode(
                     self._code_mode), self._reply_addr)

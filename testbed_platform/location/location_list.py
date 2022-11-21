@@ -193,7 +193,7 @@ class LocationList:
         self._loc_queue.put(pos_cand)
         self.sync_to_syncer(pos_cand)
         print(">>> {} [append] {}".format(self.name,pos_cand._pos.pos_detail_str()),file=CALC_LOG)
-        print(">>> {} [append] {}".format(self.name,pos_cand._pos.pos_detail_str()))
+        # print(">>> {} [append] {}".format(self.name,pos_cand._pos.pos_detail_str()))
         # ! location server log
         # print(">>> {} [append] {}".format(self.name,pos_cand._pos.pos_detail_str()))
         print("loc_size =",self.size,file=CALC_LOG)
@@ -237,7 +237,7 @@ class LocationList:
         self._motion_queue.put(motion)
         self._loc_queue.put(next_pos_cand)
         self.sync_to_syncer(next_pos_cand)
-        next_pos_cand.print_position("{} [append]".format(self.name))
+        # next_pos_cand.print_position("{} [append]".format(self.name))
 
     def advance_once(self,sensor_data,msg):
         if (self.state == SystemState.LOSS): 
@@ -357,7 +357,7 @@ class LocationList:
 
         # 如果本次无解
         if (len(self.current._cands_kids)==0):
-            print("choice =",-1)
+            # print("choice =",-1)
             self.current._gap_times +=1
             if (self._action and self.current._gap_times == pc.LOSS_TIME):
                 self.state = SystemState.LOSS

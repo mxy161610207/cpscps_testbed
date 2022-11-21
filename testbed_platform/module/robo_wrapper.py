@@ -71,13 +71,21 @@ class RoboMasterEPWrapper:
         self._robomaster_ep.led.set_led(comp="all", r=r, g=g, b=b)    
         self.flush_undefined_behavior()
 
-    def query_position(self):
-        # [x,y,deg]
-        if (not self._sim_msg_recver.is_online):
-            raise PlatformException("[platform] query illegal sim_msg_recver")
+    # # 询问虚拟小车位置
+    # def query_sim_position(self):
+    #     # [x,y,deg]
+    #     if (not self._sim_msg_recver.is_online):
+    #         raise PlatformException("[platform] query illegal sim_msg_recver")
         
-        #TODO
-        self._sim_msg_recver.query_position()
+    #     #TODO
+    #     self._sim_msg_recver.query_position()
+
+    def query_phy_position(self):
+        # [x,y,deg]
+        if (not self._phy_msg_sender.is_online):
+            raise PlatformException("[platform] query illegal _phy_msg_sender")
+        
+        return self._phy_msg_sender.query_position()
 
     def send_adjust_status(self,is_on=False):
         if (not self._phy_msg_sender.is_online):
@@ -96,7 +104,7 @@ class RoboMasterEPWrapper:
                 if (ss=='Q' or ss=='q'):
                     break
                 for ch in ss:
-                    self.do_action(ch,self._robomaster_ep)
+                    self.do_action(ch)
         else:
             # step1  
             time.sleep(0.5)
@@ -108,14 +116,14 @@ class RoboMasterEPWrapper:
                 for i in range(4):
                     if dis[i]<dis[min_id]: min_id=i
 
-                if (dis[min_id]>300): break
-                match_distance = 300 - dis[min_id]
+                if (dis[min_id]>400): break
+                match_distance = 400 - dis[min_id]
                 match_distance = max(100,match_distance)
 
                 print(">>> adjust {} {} {}".format(dis_dir[min_id],
                 dis[min_id],match_action[min_id]))
-                self.do_action(match_action[min_id],self._robomaster_ep,
-                max(0.1,match_distance*0.001))
+                self.do_action(match_action[min_id],
+                    move_dis=max(0.1,match_distance*0.001))
 
             # step2 
             self.do_action('B',self._robomaster_ep)
@@ -124,7 +132,7 @@ class RoboMasterEPWrapper:
 
         self._timer_manager.adjust_status_end()
 
-    def do_action(self,action,move_dis=0.5,rot_deg=45,mute=False):
+    def do_action(self,action, move_dis=0.5,rot_deg=45,mute=False):
 
         ep_chassis=self._robomaster_ep.chassis
         
@@ -153,15 +161,18 @@ class RoboMasterEPWrapper:
             self._rot_flip=-self._rot_flip
         elif (action == 'F'):
             self._phy_msg_sender.location_server_reset()
+            # pos = self._phy_msg_sender.query_position()
+            # print("init = ({:.3f},{:.3f}) deg = {:.3f}".
+            #     format(pos['x'], pos['y'], pos['deg']))
         else:
             pass
         
         print("[sdk_handler] dji action success")
 
-    def do_usr_action(self,action,move_dis=0.5,rot_deg=45,mute=False):
+    def do_usr_action(self,action,move_dis=2,rot_deg=45,mute=False):
         ep_chassis=self._robomaster_ep.chassis
         
-        xy_speed=0.3
+        xy_speed=0.6
         z_speed=60
         if (action == 'W'):
             ep_chassis.move(move_dis,0,0,xy_speed,z_speed).wait_for_completed()

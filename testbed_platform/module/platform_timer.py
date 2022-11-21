@@ -20,31 +20,26 @@ class PlatformTimerManager():
         self.register_timer.remove(timer)
 
     def adjust_status_start(self):
+        print("[sdk] >>> ENTER adjust_mode")
         if not self.adjust_lock.acquire(blocking=False):
-            print("already in adjust status")
+            print("[sdk] already in adjust_mode")
             return False
-        print("switch to adjust status")
         self.start_time = time.time()
 
         # into adjust status
         self._car_handler.led_behavior(state="adjust")
-        print("1")
 
         for timer in self.register_timer:
             print(timer)
             timer.interval_lock.acquire()
         
-        print("2")
-        
         return True
     
     def adjust_status_end(self):
-        print("exit adjust status")
-        pos = self._car_handler.query_position()
-        print("after adjust pos = {:.3f} {:.3f} deg = {:.3f}".format(pos[0],pos[1],pos[2]))
+        pos = self._car_handler.query_phy_position()
+        print("after adjust pos = {:.3f} {:.3f} deg = {:.3f}".format(pos['x'],pos['y'],pos['deg']))
 
         # exit adjust status
-        print("exit adjust status")
         self._car_handler.send_adjust_status(is_on=False)
         self._car_handler.led_behavior(state="normal")
 
@@ -58,6 +53,7 @@ class PlatformTimerManager():
             timer.interval_lock.release()
 
         self.adjust_lock.release()
+        print("[sdk] <<< EXIT adjust_mode")
 
 
 class PlatformTimer(Thread):

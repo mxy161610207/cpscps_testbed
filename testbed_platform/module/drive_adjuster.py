@@ -95,7 +95,7 @@ class DriveSpeedAdjuster():
             
             sdk_handler.SECURITY_MONITOR.register_and_start( 
                 obj=self.cur_proto, 
-                check_distance=200)
+                check_distance=300)
 
             sdk_handler.SECURITY_MONITOR.wait_for_trigger()
 

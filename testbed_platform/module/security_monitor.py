@@ -29,7 +29,7 @@ class SecurityMonitor():
         pass
 
     # 设置警戒线，并开启一个等待event事件的进程
-    def register_and_start(self,obj,check_distance = 200):
+    def register_and_start(self,obj,check_distance = 300):
         self._set_json = None
         self._event.clear()
 
@@ -92,7 +92,7 @@ class SecurityMonitor():
             pos=self._get_set_reply()
         else:
             # 正常结束
-            pos=sdk_handler.PHY_SENDER.query_position()
+            pos=self._car_handler.query_phy_position()
         return pos
     
     def isSet(self):

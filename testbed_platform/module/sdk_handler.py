@@ -99,7 +99,7 @@ def raiser(
         if (global_status.value == -1):
             break
         
-        print("get {}".format(action_json_str))
+        # print("get {}".format(action_json_str))
 
         action_type, action_info = action_json['type'], action_json['info']
 
@@ -110,7 +110,7 @@ def raiser(
                 if real_car:
                     global PHY_SENDER
                     PHY_SENDER.location_server_reset()
-                    pos = PHY_SENDER.query_position()
+                    pos = CAR_HANDLER.query_phy_position()
                     print("init = ({:.3f},{:.3f}) deg = {:.3f}".
                         format(pos['x'], pos['y'], pos['deg']))
                 else:
@@ -135,6 +135,7 @@ def raiser(
                 action = action_info['api_info']
 
                 if real_car:
+                    print("get {}".format(action_json_str))
                     CAR_HANDLER.do_action(action)
                 else:
                     time.sleep(2)
