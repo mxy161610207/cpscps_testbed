@@ -105,7 +105,7 @@ class PositionCanvas:
     _grid_col_sz = _grid_map + 3
     _grid_padx = 10
     _title_font = ('Times', 20)
-    _map_size = 400
+    _map_size = 300
     _map_padxy = _map_size//10
 
     def __init__(self, window, tag, name, x, y, syncer):
