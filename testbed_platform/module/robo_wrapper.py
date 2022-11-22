@@ -6,11 +6,14 @@ import time
 from .platform_exception import PlatformException
 from .platform_timer import PlatformTimerManager
 from .physical_info_handler import PhysicalInfoHandler
+from .simulate_info_handler import SimulateInfoHandler
 from .security_monitor import SecurityMonitor
 from .drive_adjuster import DriveSpeedAdjuster
 
 class RoboMasterEPWrapper:
-    def __init__(self,server_addr,phy_sender_addr,sim_sender_addr=None):
+    def __init__(self,
+        location_server_addr, phy_sender_addr, grd_syncer,
+        simluate_engine_addr, sim_sender_addr, sim_syncer):
         print("__init__ RoboMasterEPWrapper start")
         self._status = 1
         self._rot_flip=-1
@@ -19,8 +22,8 @@ class RoboMasterEPWrapper:
         self._has_active_car=False
         self._robomaster_ep=None
 
-        self._phy_msg_sender = PhysicalInfoHandler(phy_sender_addr,server_addr,self)
-        self._sim_msg_recver = None
+        self._phy_msg_sender = PhysicalInfoHandler(grd_syncer, phy_sender_addr, location_server_addr,self)
+        self._sim_msg_sender = SimulateInfoHandler(sim_syncer, sim_sender_addr, simluate_engine_addr,self)
 
         self._timer_manager = PlatformTimerManager(self)
         self._security_monitor = SecurityMonitor(self)
@@ -71,21 +74,24 @@ class RoboMasterEPWrapper:
         self._robomaster_ep.led.set_led(comp="all", r=r, g=g, b=b)    
         self.flush_undefined_behavior()
 
-    # # 询问虚拟小车位置
-    # def query_sim_position(self):
-    #     # [x,y,deg]
-    #     if (not self._sim_msg_recver.is_online):
-    #         raise PlatformException("[platform] query illegal sim_msg_recver")
-        
-    #     #TODO
-    #     self._sim_msg_recver.query_position()
-
     def query_phy_position(self):
-        # [x,y,deg]
+        # {'x':x,'y':y,'deg':deg,'rad':rad}
         if (not self._phy_msg_sender.is_online):
             raise PlatformException("[platform] query illegal _phy_msg_sender")
         
         return self._phy_msg_sender.query_position()
+    
+    def query_sim_position(self):
+        # {'x':x,'y':y,'deg':deg,'rad':rad}
+
+        # if (not self._phy_msg_sender.is_online):
+        #     raise PlatformException("[platform] query illegal _phy_msg_sender")
+        
+        return self._sim_msg_sender.query_position()
+
+    def reset_simulate_syncer(self,pos_info):
+        self._phy_msg_sender.simulate_syncer_update(pos_info)
+        pass
 
     def send_adjust_status(self,is_on=False):
         if (not self._phy_msg_sender.is_online):

@@ -3,6 +3,7 @@
 import queue
 import threading
 import time
+import math
 
 from .location_config import SystemState
 from .location_list import LocationList
@@ -186,6 +187,9 @@ class LocationCalculater:
             else:
                 raise Exception("unknown query {}".format(recv_json))
 
+        elif data_type == "SIMULATE":
+            self.location_sim.simulate_syncer_update(info)
+            
         elif data_type == "EOF":
             print("shutdown")
             self.server._shutdown = True
@@ -219,7 +223,8 @@ class LocationCalculater:
                 'location_analysis': self.location_grd.location_analysis.name,
                 'x': pos.x,
                 'y': pos.y,
-                'deg': pos.deg
+                'deg': pos.deg,
+                'rad': math.radians(pos.deg)
             }
         }
         # print("reply_json",reply_json)
@@ -235,7 +240,8 @@ class LocationCalculater:
                 'location_analysis': self.location_grd.location_analysis.name,
                 'x': pos.x,
                 'y': pos.y,
-                'deg': pos.deg
+                'deg': pos.deg,
+                'rad': math.radians(pos.deg)
             }
         }
         self.server._send_msg_queue.put(reply_json)

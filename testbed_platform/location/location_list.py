@@ -231,6 +231,7 @@ class LocationList:
             only for sim_tree
         '''
         assert(self.is_simulate)
+
         nxt_irs_pos = ActionMonitor.act_motion(self.current._pos,motion)
         next_pos_cand = PositionCands(nxt_irs_pos)
         
@@ -238,6 +239,20 @@ class LocationList:
         self._loc_queue.put(next_pos_cand)
         self.sync_to_syncer(next_pos_cand)
         # next_pos_cand.print_position("{} [append]".format(self.name))
+
+    def simulate_syncer_update(self,pos_info):
+        '''
+            only for sim_tree
+        '''
+        assert(self.is_simulate)
+
+        pos = Position(pos_info,is_irs_center=False)
+        pos_cand = PositionCands(pos)
+        pos_cand.set_is_fake_point()
+        self._loc_queue.clear()
+        self._motion_queue.clear()
+        self._loc_queue.put(pos_cand)
+        self.sync_to_syncer(pos_cand)
 
     def advance_once(self,sensor_data,msg):
         if (self.state == SystemState.LOSS): 

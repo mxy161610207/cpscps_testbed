@@ -7,10 +7,11 @@ from location.location_config import SystemState
 
 # Data from physical  
 class PhysicalInfoHandler(SensorSourceHandler):
-    def __init__(self,self_addr,server_addr,car_handler):
+    def __init__(self,syncer, self_addr,server_addr,car_handler):
         print("__init__ PhysicalInfoHandler start")
         super().__init__(self_addr,server_addr ,tag = 'P')
 
+        self._position_syncer = syncer
         self._car_handler=car_handler
         self._sys_sub_modules = []
 
@@ -180,6 +181,16 @@ class PhysicalInfoHandler(SensorSourceHandler):
         self.angle_init_once = False
         self.sender_send_json(system_json, need_reply=False)
         return
+
+    def simulate_syncer_update(self,pos_info):
+        syncer_json={
+            'type':'SIMULATE',
+            'info':{
+                pos_info
+            }
+        }
+        self.sender_send_json(syncer_json, need_reply=False)
+        return
     
     def send_server_sync_json(self, is_reset = False):
         sync_json={
@@ -203,7 +214,7 @@ class PhysicalInfoHandler(SensorSourceHandler):
             return False
         return True
 
-
+    # TODO 既然有了syncer，除了 stop tag，其他查询应该直接从sync获取
     def query_position(self):
         query_json={
             'type':'QUERY',

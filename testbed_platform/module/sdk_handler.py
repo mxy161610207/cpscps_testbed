@@ -1,20 +1,25 @@
 # modify some robomaster api
 import time
-import json
+import json,random
 from robomaster import robot
 
 from .robo_wrapper import RoboMasterEPWrapper
 from .platform_exception import PlatformException
 
-def create_car_handler(location_server_addr,physical_sender_addr):
+def create_car_handler(
+        location_server_addr,physical_sender_addr,grd_syncer,
+        simulate_engine_addr,simulate_sender_addr,sim_syncer):
     # 获取车的handler，设置监视资源
-    car_handler = RoboMasterEPWrapper(location_server_addr,physical_sender_addr)
+    car_handler = RoboMasterEPWrapper(
+        location_server_addr,physical_sender_addr,grd_syncer,
+        simulate_engine_addr,simulate_sender_addr,sim_syncer)
 
-    global CAR_HANDLER, PHY_INFO, PHY_SENDER
+    global CAR_HANDLER, PHY_INFO, PHY_SENDER, SIM_SENDER
 
     CAR_HANDLER = car_handler
     PHY_INFO = car_handler._phy_msg_sender.info
     PHY_SENDER = car_handler._phy_msg_sender
+    SIM_SENDER = car_handler._sim_msg_sender
 
     global SECURITY_MONITOR, TIME_MANAGER, DRIVE_SPEED_ADJUSTER
     SECURITY_MONITOR = car_handler._security_monitor
@@ -73,24 +78,31 @@ def raiser(
     controller_message = platform_message_resources['control']
 
     physical_sender_addr = platform_socket_address['phy_sender']
-    # simluate_sender_addr = platform_socket_address['sdk']
+    simulate_sender_addr = platform_socket_address['sim_sender']
+
     location_server_addr = platform_socket_address['location']
+    simulate_engine_addr = platform_socket_address['sim_engine']
 
     
-    # grd_location_syncer = platform_message_resources['grd_position']
+    grd_syncer = platform_message_resources['grd_position']
+    sim_syncer = platform_message_resources['sim_position']
 
-    real_car = True
+    real_car = False
 
     if sdk_platform_status.value == 0:
         if real_car:
-            create_car_handler(location_server_addr,physical_sender_addr)
+            create_car_handler(
+                location_server_addr,physical_sender_addr,grd_syncer,
+                simulate_engine_addr,simulate_sender_addr,sim_syncer)
         else:
-            time.sleep(4)
+            # time.sleep(2)
+            pass
         
         sdk_platform_status.value = 1
 
     
     global CAR_HANDLER
+    global PHY_SENDER,SIM_SENDER
 
     while True:
         action_json_str = sdk_platform_message.get()
@@ -102,13 +114,16 @@ def raiser(
         # print("get {}".format(action_json_str))
 
         action_type, action_info = action_json['type'], action_json['info']
+        reply_json={
+            'status':'success',
+            'type':action_type
+        }
 
         if action_type == 'SYSTEM_STATUS':
             if (action_info['status'] == 'init_success'):
                 sdk_platform_status.value = 2
 
                 if real_car:
-                    global PHY_SENDER
                     PHY_SENDER.location_server_reset()
                     pos = CAR_HANDLER.query_phy_position()
                     print("init = ({:.3f},{:.3f}) deg = {:.3f}".
@@ -116,8 +131,13 @@ def raiser(
                 else:
                     time.sleep(2)
                     pass
-
-                controller_message.put("init_success")
+                
+                info = {
+                    'msg':"init_success"
+                }
+                
+                reply_json['info']=info
+                controller_message.put(json.dumps(reply_json))
                 
                 pass
 
@@ -125,7 +145,61 @@ def raiser(
                 global_status.value == -1
                 break
 
-        elif action_type == 'ACTION':
+        elif action_type == 'SENSOR':
+            sensor_type =  action_info['sensor_type']  
+            sensor_info = "ERROR"          
+            if (sensor_type == 'distance'):
+                if real_car:
+                    # info = SIM_SENDER.update_distance_data_info()
+                    sensor_info = PHY_INFO.get_sensor_data_info()
+                else:
+                    sensor_info = "distance{}".format(random.randint(0,9999))
+
+            elif sensor_type == 'angle':
+                if real_car:
+                    # info = SIM_SENDER.update_angle_data_info()
+                    sensor_info = PHY_INFO.get_yaw_ground_angle()
+                else:
+                    sensor_info = "angle{}".format(random.randint(0,9999))
+
+            
+            info ={
+                'sensor_type':sensor_type,
+                'sensor_info':str(sensor_info)
+            }
+            reply_json['info']=info
+            controller_message.put(json.dumps(reply_json))
+        
+        elif action_type == 'DRIVE':
+            action_reply_message = "error"
+            if (sdk_platform_status.value == 2):
+                pass
+            elif (sdk_platform_status.value == 3):
+                print("sdk_platform_status = {}, ACTION is running, unable to run driven".format(
+                            sdk_platform_status.value))
+                raise PlatformException("")
+
+            action = action_info['api_info']
+            if real_car:
+                x,y,z = action['x'],action['y'],action['z']
+                CAR_HANDLER._robomaster_ep.chassis.drive_speed(x,y,z,timeout=5)
+                # print("get {}".format(action_json_str))
+                # CAR_HANDLER.do_action(action)
+            else:
+                time.sleep(2)
+                pass
+
+            info = {
+                'msg':"drive_action_success"
+            }
+                
+            reply_json['info']=info
+            controller_message.put(json.dumps(reply_json))
+
+        elif action_type == 'MOVE':
+            action_reply_message = "error"
+            
+            # 初始化阶段，动作全部直接执行
             if action_info['api_version'] == 'DJI':
                 if (sdk_platform_status.value != 1):
                     print("sdk_platform_status = {}, but run USER sdk".format(
@@ -134,15 +208,17 @@ def raiser(
 
                 action = action_info['api_info']
 
+                # 执行动作
                 if real_car:
                     print("get {}".format(action_json_str))
                     CAR_HANDLER.do_action(action)
                 else:
                     time.sleep(2)
                     pass
+                
+                action_reply_message = "dji_action_success"
 
-                controller_message.put("dji_action_success")
-
+            # 程序解析阶段
             elif action_info['api_version'] == 'USER':
                 if (sdk_platform_status.value != 2):
                     print("sdk_platform_status = {}, but run DJI sdk".format(
@@ -160,14 +236,32 @@ def raiser(
                     pass
                 
                 
-                controller_message.put("usr_action_success")
-                # TODO
-                pass
+                action_reply_message = "usr_action_success"
+            
+            info = {
+                'msg':action_reply_message
+            }
+            reply_json['info']=info
+            controller_message.put(json.dumps(reply_json))
 
-        elif action_type == 'SENSOR':
-            if action_info['sensor_module'] == 'ir_sensor':
-                # TODO
+        elif action_type == 'SIM_SYNCER':
+            pos_info = action_info['api_info']
+            if real_car:
+                sensor_info = CAR_HANDLER.reset_simulate_syncer(pos_info)
+                # info = SIM_SENDER.update_angle_data_info()
+                # info = PHY_INFO.get_yaw_ground_angle()
                 pass
+            else:
+                sensor_info = json.dumps(pos_info)
+
+            info = {
+                'msg':"sim_syncer_success"
+            }
+            
+            reply_json['info']=info
+            controller_message.put(json.dumps(reply_json))
+            
+            pass
     
     # 如果sdk不再运行，其他模块也需要退出
     global_status = platform_status_resources['global']

@@ -65,10 +65,9 @@ def basic_set(ax,xlim_range,ylim_range,title_str):
     ax.set_ylim([0,ylim_range])
     ax.set_title(title_str)
 
-def init_guard_ax_set(ax):
+def init_guard_ax_set(ax,title_str):
     xlim_range = pc.E
     ylim_range = pc.E
-    title_str = "Grd"
     basic_set(ax,xlim_range,ylim_range,title_str)
 
 def init_simulate_ax_set(ax):
@@ -175,7 +174,7 @@ class PositionCanvas:
 
         # 初始化画布
         self._fig_ax.clear()
-        init_guard_ax_set(ax=self._fig_ax)
+        init_guard_ax_set(ax=self._fig_ax,title_str=self._name)
 
         # 绘制当前位置
         self._create_pos_fig(
@@ -249,9 +248,9 @@ class PositionCanvas:
         if (self._tag=='grd'):
             self._ani = animation.FuncAnimation(
             fig, self._animate_update, frames=10)
-        # elif (self._tag=='sim'):
-        #     self._ani = animation.FuncAnimation(
-        #     fig, self.animate_update_sim, frames=10)
+        elif (self._tag=='sim'):
+            self._ani = animation.FuncAnimation(
+            fig, self._animate_update, frames=10)
     
         return canvas, ax
 
@@ -414,6 +413,9 @@ def create_display(
     grd_canvas = PositionCanvas(window = root_window,
         tag="grd", name = "Guard Position", x=0, y=0,
         syncer= grd_location_syncer)
+    sim_canvas = PositionCanvas(window = root_window,
+        tag="sim", name = "Simulate Position", x=0, y=1,
+        syncer= sim_location_syncer)
     # sim_canvas = PositionCanvas(root_window, "sim", "Simulate Position", 0, 1)
 
     # global resource_manager

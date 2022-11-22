@@ -4,7 +4,7 @@ import tkinter as tk
 from tkinter.scrolledtext import ScrolledText
 import matplotlib.pyplot as plt
 import matplotlib.figure as mplfig
-from matplotlib.patches import Rectangle
+from matplotlib.widgets import TextBox
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
 import threading
@@ -54,46 +54,74 @@ class ActionButton():
         self._button.config(command= lambda: 
             self._panel._bind_action(self._button_code))
 
-class DJIControllerPanel():
-    def __init__(self,window,name,status):
+class BaseControllerPanel():
+    _class_panel_left_col = 0
+
+    def __init__(self,window,name,status,panel_span=4):
         self._window=window
         self._name = name
         self._status = status
 
-        row,col=3,3
+        # 一个面板占_col_span列
+        self._panel_span = panel_span
+        self._panel_col_start = BaseControllerPanel._class_panel_left_col+1
+        
+        BaseControllerPanel._class_panel_left_col += panel_span
+
+        self._button_list = []
+        self._status_text = tk.Label(self._window, text=self._name,justify='left')
+
+    def _set_status_text(self,prefix):
+        self._status_text.config(text="{}".format(
+            prefix))
+
+    def _disable_all_button(self):
+        for button in self._button_list:
+            button._set_disable()
+    
+    def _enable_all_button(self):
+        for button in self._button_list:
+                button._set_enable()
+
+class DJIControllerPanel(BaseControllerPanel):
+    def __init__(self,window,name,status,panel_span=10):
+        super().__init__(window,name,status,panel_span)
+
+        grid_row = 0
+        grid_col = self._panel_col_start
+        col_span = self._panel_span
+
         button_name_list=[
-            ['小左转','刷新','小右转'],
-            ['左转45','前进','右转45'],
-            ['左移','后退','右移'],
+            ['前进','左移','后退','右移'],
+            ['左转45','小左转','小右转','右转45'],
+            ['掉头','定位刷新']
         ]
         button_code_list=[
-            ['l','F','r'],
-            ['L','W','R'],
-            ['A','S','D'],
+            ['W','A','S','D'],
+            ['L','l','r','R'],
+            ['B','F']
         ]
-
-        self._button_list=[
-            [] for _ in range(row+1)
-        ]
-
-        for i in range(row):
-            for j in range(col):
+        
+        for i in range(len(button_name_list)):
+            grid_row+=1
+            for j in range(len(button_name_list[i])):
                 bname,bcode=button_name_list[i][j],button_code_list[i][j]
-                tmp = ActionButton(self,bname,bcode,i+1,j+1)
-                self._button_list[i].append(tmp)
+                button_col_span = 4//len(button_name_list[i])
+                tmp = ActionButton(self,bname,bcode,grid_row,grid_col+j*button_col_span,ysize=button_col_span)
+                self._button_list.append(tmp)
+                # print(bname,grid_row,grid_col+j,1,button_col_span)
 
-        tmp = ActionButton(self,"初始化","init",row+1,1,1,col)
-        self._button_list[row].append(tmp)
+        grid_row+=1
+        tmp = ActionButton(self,"平台初始化","init",grid_row,grid_col,ysize = col_span)
+        self._button_list.append(tmp)
+        
+        grid_row+=1
+        status_size = 10
+        self._status_text.grid(row=grid_row, column=grid_col,rowspan=status_size, columnspan=col_span,
+        sticky="nsew")
 
-        self._status_text = tk.Label(self._window, text="DJIControllerPanel", font=('Times', 14))
-        self._status_text.grid(
-            row=row+2, column=1,
-            rowspan=1, columnspan=col,
-            sticky="nsew")
-
-    
-    def _set_status_text(self,prefix):
-        self._status_text.config(text="{}".format(prefix))
+        grid_row+=status_size
+        self._panel_total_row = grid_row+1
 
     @staticmethod
     def _action_json_create(ch):
@@ -106,7 +134,7 @@ class DJIControllerPanel():
             }
         else:
             action_json={
-                'type':'ACTION',
+                'type':'MOVE',
                 'info':{
                     'api_version':'DJI',
                     'api_info':ch
@@ -126,95 +154,166 @@ class DJIControllerPanel():
         
         self._set_status_text("error".format(ch))
 
-    def _disable_all_button(self):
-        for button_row in self._button_list:
-            for button in button_row:
-                button._set_disable()
-    
-    def _enable_all_button(self):
-        for button_row in self._button_list:
-            for button in button_row:
-                button._set_enable()
+class UsrControllerPanel(BaseControllerPanel):
+    def __init__(self,window,name,status,panel_span=10):
 
-class UsrControllerPanel():
-    def __init__(self,window,name,status):
-        self._window=window
-        self._name = name
-        self._status = status
+        super().__init__(window,name,status,panel_span)
 
-        row,col=3,3
-        button_name_list=[
-            ['小左转','刷新','小右转'],
-            ['左转90','前进','右转90'],
-            ['左移','后退','右移'],
+        button_name_list = [
+            ['move','x','y','z','timeout'],
+            ['drive','x','y','z','timeout'],
+            ['sim_syncer','x','y','deg']
         ]
-        button_code_list=[
-            ['l','F','r'],
-            ['L','W','R'],
-            ['A','S','D'],
-        ]
+        self._action_info = {}
+        
+        grid_row = 0
+        grid_col = self._panel_col_start
+        col_span = self._panel_span
 
-        self._button_list=[
-            [] for _ in range(row+1)
-        ]
+        for button_info in button_name_list:
+            grid_row+=1
+            col = grid_col
+            api_name = button_info[0]
 
-        for i in range(row):
-            for j in range(col):
-                bname,bcode=button_name_list[i][j],button_code_list[i][j]
-                tmp = ActionButton(self,bname,bcode,i+1,3+j+1)
-                self._button_list[i].append(tmp)
+            api_text = tk.Label(self._window, text=api_name)
+            api_text.grid(row=grid_row, column=col, rowspan=1, columnspan=1, sticky="nsew")
 
-        self._status_text = tk.Label(self._window, text="DJIControllerPanel", font=('Times', 14))
-        self._status_text.grid(
-            row=row+1, column=3+1,
-            rowspan=2, columnspan=col,
-            sticky="nsew")
+            args_element = {}
+            for args_name in button_info[1:]:
+                args_text = tk.Label(self._window, text=args_name,width=6)
+                args_entry = tk.Entry(self._window, width=6)
+                
+                col+=1
+                args_text.grid(row=grid_row, column=col, rowspan=1, columnspan=1, sticky="nsew",pady=10)
+                col+=1
+                args_entry.grid(row=grid_row, column=col,rowspan=1, columnspan=1, sticky="nsew",pady=10)
+        
+                args_element[args_name] = args_entry
+            
+            self._action_info[api_name]=args_element
+
+            col+=1
+            api_button = ActionButton(self,"提交",api_name,grid_row,col)
+            self._button_list.append(api_button)
+
+        
+        grid_row+=1
+        status_size = 3
+        self._status_text.grid(row=grid_row, column=grid_col,rowspan=status_size, columnspan=col_span,
+        sticky="nsew")
+
+        self._sensor_name_list = ['distance','angle']
+        self._sensor_info={}
+
+        for sensor_name in self._sensor_name_list:
+            grid_row+=1
+            col = grid_col
+
+            sensor_text = tk.Label(self._window, text=sensor_name)
+            sensor_text.grid(row=grid_row, column=col, rowspan=1, columnspan=2, sticky="nsew")
+
+            sensor_button = ActionButton(self,"查询",sensor_name,grid_row,col+2, ysize = 2)
+            self._button_list.append(sensor_button)
+
+            sensor_result = tk.Label(self._window, text="None")
+            sensor_result.grid(row=grid_row, column=col+4,columnspan= 3, sticky="nsew")
+
+            self._sensor_info[sensor_name] = sensor_result
+
+        grid_row+=1
+        status_size = 1
+        self._status_text.grid(row=grid_row, column=grid_col,rowspan=status_size, columnspan=col_span,
+        sticky="nsew")
+
+        grid_row+=status_size
+        self._panel_total_row = grid_row+1
 
         self._disable_all_button()
 
-    def _set_status_text(self,prefix):
-        self._status_text.config(text="{}".format(prefix))
+    def handle_sensor_update(self,sensor_type,sensor_info):
+        sensor_label = self._sensor_info[sensor_type]
+        sensor_label.config(text=sensor_info)
+
+    def is_block(self,button_code):
+        if (button_code=='drive' or self.is_sensor(button_code)):
+            return False
+        return True
+
+    def is_sensor(self,button_code):
+        if (button_code in self._sensor_name_list):
+            return True
+        return False
+    
+    @staticmethod
+    def _sensor_json_create(button_code):
+        sensor_json={
+            'type':'SENSOR',
+            'info':{
+                'sensor_type':button_code,
+            }
+        } 
+        return sensor_json
 
     @staticmethod
-    def _action_json_create(ch):
-        if (ch=='init'):
-            action_json={
-                'type':'SYSTEM_STATUS',
-                'info':{
-                    'status':'init_success',
-                }
+    def _api_json_create(button_code,args):
+        api_json={
+            'type':button_code.upper(),
+            'info':{
+                'api_version':'USER',
+                'api_info':args
             }
-        else:
-            action_json={
-                'type':'ACTION',
-                'info':{
-                    'api_version':'USER',
-                    'api_info':ch
-                }
-            }
-        return action_json
-    
-    def _bind_action(self,ch):
+        } 
+        return api_json
+
+    def _args_json_create(self,api_code):
+
+        args_element = self._action_info[api_code]
+        args_json = {}
+        # print(args_element)
+        for k in args_element:
+            args_str = args_element[k].get()
+            try:
+                val = float(args_str)
+            except Exception as e:
+                if (k=='timeout'):
+                    val = 10.0
+                else:
+                    val = 0.0
+            
+            if (api_code == 'drive' or api_code == 'move'):
+                if (k=='timeout'):
+                    val = min(max(0.0,val),10.0)
+                elif k=='z' or k=='deg':
+                    val = min(max(0,val),360)
+                else:
+                    val = min(max(0.3,val),3)
+            elif api_code == 'sim_syncer':
+                if k=='deg':
+                    val = min(max(0,val),360)
+                else:
+                    val = min(max(300,val),900)
+
+            args_json[k]=val
+        
+        return args_json
+      
+    def _bind_action(self,button_code):
         if self._status.value != 1:
-            self._set_status_text("reject [{}]".format(ch))
+            self._set_status_text("reject [{}]".format(button_code))
             return 
+
+        to_send_json = {}
+        self._set_status_text("accept [{}]".format(button_code))
+        if self.is_sensor(button_code):
+            to_send_json = self._sensor_json_create(button_code)
+            action_json_sender(to_send_json)
+        else:
+            args_json = self._args_json_create(button_code)
+            to_send_json = self._api_json_create(button_code,args_json)
+            action_json_sender(to_send_json)
         
-        elif self._status.value == 1:
-            action_json_sender(UsrControllerPanel._action_json_create(ch))
-            self._set_status_text("accept [{}]".format(ch))
-            return 
-        
-        self._set_status_text("error".format(ch))
-    
-    def _disable_all_button(self):
-        for button_row in self._button_list:
-            for button in button_row:
-                button._set_disable()
-    
-    def _enable_all_button(self):
-        for button_row in self._button_list:
-            for button in button_row:
-                button._set_enable()
+        json_str = json.dumps(to_send_json,indent=2)
+        controller_panels['dji']._set_status_text("send : "+json_str)
 
 def my_root_window_set():
     # name
@@ -263,20 +362,23 @@ def create_controller_display(
         'usr':usr_controller_panel
     }
     
-    dji_controller_panel._set_status_text("able")
-    usr_controller_panel._set_status_text("freezed")
+    dji_controller_panel._set_status_text("先初始化")
+    usr_controller_panel._set_status_text("")
+
+    # next_row = dji_controller_panel._panel_total_row
+    next_row = max(dji_controller_panel._panel_total_row,usr_controller_panel._panel_total_row)
 
     # 总按键
     global status_update_register
-    status_box = tk.Label(root_window, text="flush", font=('Times', 14))
-    status_box.grid(row=6,rowspan=1,
+    status_box = tk.Label(root_window, text="flush")
+    status_box.grid(row=next_row,rowspan=1,
                     column=1, columnspan=6,
                     sticky="nsew",
                     padx=20, pady=10)
     status_update_register.append(status_box)
 
     quit_button = tk.Button(root_window, text='quit',width=3)
-    quit_button.grid(row=7,rowspan=1,
+    quit_button.grid(row=next_row+1,rowspan=1,
                     column=1, columnspan=6,
                     sticky="nsew",
                     padx=20, pady=10)
@@ -308,6 +410,8 @@ def update_controller_status(controller_status, val):
             message = "空闲中"
     elif val == 2:
         message = "正在运行中"
+    elif val == -1:
+        message = "执行出错"
 
     controller_status.value = val
 
@@ -319,20 +423,31 @@ def update_controller_status(controller_status, val):
 
 # 另一个线程的，权限只能读取controller_status和controller_message
 def flush_controller_status(controller_status,controller_message):
+    global controller_panels
     while True:
         if controller_message.empty():
             time.sleep(0.5)
         
-        get = controller_message.get()
-        if isinstance(get,str):
-            # "init_success","action_success"
-            # print("get {}".format(get))
-            update_controller_status(controller_status, 1)
-            if get=='init_success':
+        reply_json_str = controller_message.get()
+        reply_json = json.loads(reply_json_str)
+        if (reply_json['status']!='success'):
+                update_controller_status(controller_status, -1)
+        
+        reply_type,reply_info = reply_json['type'],reply_json['info']
+        if (reply_type=='SYSTEM_STATUS'):
+            if (reply_info['msg']=='init_success'):
                 # 按钮有效性交换
-                global controller_panels
+                update_controller_status(controller_status, 1)
                 controller_panels['dji']._disable_all_button()
                 controller_panels['usr']._enable_all_button()
+        elif reply_type=='SENSOR':
+            update_controller_status(controller_status, 1)
+            sensor_type = reply_info['sensor_type']
+            sensor_info = reply_info['sensor_info']
+            
+            controller_panels['usr'].handle_sensor_update(sensor_type,sensor_info)
+        else:
+            update_controller_status(controller_status, 1)
 
 
 def window_outside_exiter(controller_status,exit_func):

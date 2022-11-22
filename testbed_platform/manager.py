@@ -20,8 +20,10 @@ if __name__ == '__main__':
     platform_message_resources = {}
     platform_socket_address = {
         'phy_sender': ('127.0.0.1', 41997),
+        'sim_sender': ('127.0.0.1', 41998),
         'sdk' : ('127.0.0.1', 41011),
         'location': ('127.0.0.1', 41234),
+        'sim_engine': ('127.0.0.1', 44321),
     }
     
     platform_status_resources['global'] = Value('i',0)
