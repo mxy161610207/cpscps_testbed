@@ -86,7 +86,6 @@ class PhysicalInfoHandler(SensorSourceHandler):
 
     def sys_sub_all(self):
         print("开启platfrom订阅")
-        self.angle_init_once = False
         for module in self._sys_sub_modules:
             module.sys_sub()
 
@@ -127,17 +126,14 @@ class PhysicalInfoHandler(SensorSourceHandler):
 
     def set_angle_data_info(self, data_info):
         self.info._set_angle_data_info(data_info)
+        # d - yaw_ground_angle: 上电时刻yaw轴角度
+        # 小车一开始向x轴正方向放，保证上电时刻=0
         a,b,c,d = data_info
-        if (not self.angle_init_once):
-            self.angle_init_once=True
-            self.angle_init_val = d
-            print("init angle to {}".format(self.angle_init_val))
 
         angle_json={
             'type':'ANGLE_TYPE',
             'info':{
-                'angle':d-self.angle_init_val,
-                'raw_angle':d
+                'yaw_ground_angle':d
             }
         }
 
@@ -168,6 +164,7 @@ class PhysicalInfoHandler(SensorSourceHandler):
                 'next_state':nxt_state
             }
         }
+        # print("[********]send_adjust_status is_on = ",is_on)
         self.sender_send_json(system_json, need_reply=False)
         return
 
@@ -178,16 +175,13 @@ class PhysicalInfoHandler(SensorSourceHandler):
                 'next_state': SystemState.NORMAL.name
             }
         }
-        self.angle_init_once = False
         self.sender_send_json(system_json, need_reply=False)
         return
 
     def simulate_syncer_update(self,pos_info):
         syncer_json={
             'type':'SIMULATE',
-            'info':{
-                pos_info
-            }
+            'info': pos_info
         }
         self.sender_send_json(syncer_json, need_reply=False)
         return

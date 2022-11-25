@@ -51,7 +51,6 @@ def sys_sub(self, *args, **kw):
         :return:  bool: 数据订阅结果
         """
         print("开启platfrom订阅: gimbal")
-        sdk_handler.PHY_INFO.angle_init_once = False
         
         sub = self._robot.dds
         subject = offical.GimbalPosSubject()

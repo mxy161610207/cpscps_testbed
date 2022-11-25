@@ -91,8 +91,8 @@ class LocationServer:
             print(recv_info, file=self.log)
 
             recv_json = json.loads(recv_info)
-            # if recv_json['type']!='ANGLE_TYPE':
-            #     print(recv_json)
+            if recv_json['type']=='SYSTEM_TYPE':
+                print(recv_json['info'])
             self.handle_msg(recv_json)
         
         if (not self.is_shutdown()): self._status.value == -1

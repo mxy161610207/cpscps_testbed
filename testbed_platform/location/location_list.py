@@ -11,7 +11,7 @@ from . import position_config as pc
 
 class LocationList:
     def __init__(self,default_len=200,name='default',syncer=None) -> None:
-        self.state = SystemState.INIT
+        # self.state = SystemState.INIT
         self.name = name
         self.syncer = syncer
         self._sim_pair = None
@@ -20,6 +20,8 @@ class LocationList:
         self._loc_queue = LocationQueue(default_len)
         self._init_pos = None
         self._motion_queue = MotionQueue(3)
+
+        self._yaw_ground_angle = 0
 
         self.reset()
     
@@ -48,14 +50,18 @@ class LocationList:
         self.syncer['status']=self._motion_queue.analysis().name
         self.syncer['info']=pos_cand._pos.pos_str
 
+        if (self.is_simulate):
+            try:
+                context = "{} {} {}".format(self.syncer['x'],self.syncer['y'],self.syncer['deg'])
+                f = open("D:\\GitHub\\cpscps_testbed\\unity_sim_pos.txt","w")
+                f.write(context)
+                f.close()
+            except Exception:
+                pass
+
     def reset(self):
         self.state = SystemState.INIT
         self._init_handle = None
-        self._init_angle = False
-
-        self._cur_sdk_angle = 0.0
-        self._correcnt_sdk_deg = 0.0
-        self._correcnt_loc_deg = 0.0
 
         self._loc_queue.clear()
         # create init point
@@ -121,23 +127,11 @@ class LocationList:
     def has_sim_pair(self):
         return not (self._sim_pair is None)
 
-    def set_sdk_angle(self,mov_deg):
-        # turn left angle be small
-        # turn right angle be big
-        self._cur_sdk_angle = -mov_deg
-    
-    def set_raw_sdk_angle(self,raw_angle):
-        if not self._init_angle:
-            self._init_angle = True
-        # turn left angle be small
-        # turn right angle be big
-        self._raw_sdk_angle = Position.round_degrees(-raw_angle)
+    def set_yaw_ground_angle(self,yaw_ground_angle):
+        self._yaw_ground_angle = Position.round_degrees(-yaw_ground_angle)
     
     def calc_ideal_angle(self):
-        angle = 0.0
-        if (self.is_initialized):
-            angle = self._correcnt_loc_deg - self._correcnt_sdk_deg + self._cur_sdk_angle
-        return Position.round_degrees(angle)
+        return Position.round_degrees(self._yaw_ground_angle)
     
     def set_action(self,action_argv):
         recv_action =  ActionMonitor(
@@ -168,8 +162,9 @@ class LocationList:
             if (self.state!=SystemState.NORMAL and self.state!=SystemState.ADJUST):
                 raise Exception("{} cannot convert to {}".format(self.state,next_state))
         elif next_state==SystemState.NORMAL:
-            if (self.state!=SystemState.ADJUST and self.state!=SystemState.INIT):
-                raise Exception("{} cannot convert to {}".format(self.state,next_state))
+            # if (self.state!=SystemState.ADJUST and self.state!=SystemState.INIT):
+            #     raise Exception("{} cannot convert to {}".format(self.state,next_state))
+            pass
         elif next_state == SystemState.INIT:
             self.reset()
 
@@ -184,9 +179,6 @@ class LocationList:
         # 如果这次移动是从fake节点第一次定位成功
         if (self.current._is_fake_point):
             self.change_state(SystemState.NORMAL)
-            self._correcnt_sdk_deg = self._cur_sdk_angle
-            self._correcnt_loc_deg = pos_cand._pos.deg
-            # pop the fake location
             self._loc_queue.pop()
         
         # 移动并更新图标
@@ -307,15 +299,6 @@ class LocationList:
         # TODO 对 _TODO_four 修改下一次的扩展base
         legal_cands = []
 
-        # only_calc_xy = False
-        # if (self._init_angle):
-        #     ideal_degree = self._raw_sdk_angle
-        #     legal_cands_with_ideal_degree = []
-        #     only_calc_xy = True
-        # else:
-        #     self.current._filter_illegal_cands([])
-        #     return False
-
         _TODO_four = 0
 
         self._mute = True
@@ -415,8 +398,7 @@ class LocationList:
         msg.append("-"*10)
 
         if (self.is_initialized):
-            print("sdk angel = {:.3f}".format(self._raw_sdk_angle),file=CALC_LOG)
-            msg.append("sdk angel = {:.3f}".format(self._raw_sdk_angle))
+            msg.append("sdk angel = {:.3f}".format(self._yaw_ground_angle))
         else:
             msg.append("sdk angel not initialized")
 
@@ -437,7 +419,7 @@ class LocationList:
 
         # 通过SDK的sub_angle修正预测位置
         if (self.is_initialized):
-            nxt_irs_pos['rad'] = math.radians(self._raw_sdk_angle)
+            nxt_irs_pos['rad'] = math.radians(self._yaw_ground_angle)
         nxt_irs_pos = Position(nxt_irs_pos,is_irs_center=True)
         
         msg.append("[ideal]{} irs = {}".format(nxt_irs_pos.pos_str,nxt_irs_pos.irs_inter_list))

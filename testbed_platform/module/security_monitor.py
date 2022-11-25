@@ -123,7 +123,7 @@ class SecurityMonitor():
             sdk_handler.EP_ROBOT.chassis._dij_drive_speed(0, 0, 0)
             self._set_reason='ADJUST'
 
-    def adjust(self,api,obj,is_manual=False):
+    def security_monitor_adjust(self,api,obj,is_manual=False):
         sdk_handler.CAR_HANDLER.flush_undefined_behavior()
         print("adjust for",api)
         if api=='move':

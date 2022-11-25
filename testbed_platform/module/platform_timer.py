@@ -20,10 +20,11 @@ class PlatformTimerManager():
         self.register_timer.remove(timer)
 
     def adjust_status_start(self):
-        print("[sdk] >>> ENTER adjust_mode")
         if not self.adjust_lock.acquire(blocking=False):
             print("[sdk] already in adjust_mode")
             return False
+            
+        print("[sdk] >>> ENTER adjust_mode")
         self.start_time = time.time()
 
         # into adjust status

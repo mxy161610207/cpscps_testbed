@@ -250,5 +250,5 @@ class SafeChassisMoveAction(action.Action):
         return    
 
     def move_adjust(self,is_manual=False):
-        sdk_handler.SECURITY_MONITOR.adjust(api='move',obj=self,is_manual=is_manual)
+        sdk_handler.SECURITY_MONITOR.security_monitor_adjust(api='move',obj=self,is_manual=is_manual)
 

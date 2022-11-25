@@ -87,7 +87,7 @@ def raiser(
     grd_syncer = platform_message_resources['grd_position']
     sim_syncer = platform_message_resources['sim_position']
 
-    real_car = False
+    real_car = True
 
     if sdk_platform_status.value == 0:
         if real_car:
@@ -100,6 +100,7 @@ def raiser(
         
         sdk_platform_status.value = 1
 
+    do_action = True
     
     global CAR_HANDLER
     global PHY_SENDER,SIM_SENDER
@@ -151,7 +152,11 @@ def raiser(
             if (sensor_type == 'distance'):
                 if real_car:
                     # info = SIM_SENDER.update_distance_data_info()
-                    sensor_info = PHY_INFO.get_sensor_data_info()
+                    # sensor_info = PHY_INFO.get_sensor_data_info()
+                    f_dir = open("D:\\GitHub\\cpscps_testbed\\unity_dir.txt","r")
+                    sensor_info = f_dir.read()
+                    f_dir.close()
+
                 else:
                     sensor_info = "distance{}".format(random.randint(0,9999))
 
@@ -181,8 +186,7 @@ def raiser(
 
             action = action_info['api_info']
             if real_car:
-                x,y,z = action['x'],action['y'],action['z']
-                CAR_HANDLER._robomaster_ep.chassis.drive_speed(x,y,z,timeout=5)
+                CAR_HANDLER.do_drive_api(action,timeout=2)
                 # print("get {}".format(action_json_str))
                 # CAR_HANDLER.do_action(action)
             else:
@@ -210,7 +214,7 @@ def raiser(
 
                 # 执行动作
                 if real_car:
-                    print("get {}".format(action_json_str))
+                    # print("get {}".format(action_json_str))
                     CAR_HANDLER.do_action(action)
                 else:
                     time.sleep(2)
@@ -225,16 +229,15 @@ def raiser(
                             sdk_platform_status.value))
                     raise PlatformException("")
 
-                action = action_info['api_info']
+                args = action_info['api_info']
                 if real_car:
-                    CAR_HANDLER.do_usr_action(action)
+                    CAR_HANDLER.do_move_api(args)
                 else:
                     # for _ in range(20):
                     #     grd_location_syncer['y']+=20
                     #     time.sleep(0.5)
                     time.sleep(2)
                     pass
-                
                 
                 action_reply_message = "usr_action_success"
             
@@ -297,8 +300,14 @@ def raiser(
 #     user_program_part(EP_ROBOT)
 
 #     print("Proc [{}] end".format(proc_name))
+def get_front_distance():
+    pass
 
+def user_program_part(ep_robot):
+    ep_chassis = ep_robot.chassis
+    ep_chassis.drive_speed(0.6,0,0)
+    while (get_front_distance()>300):
+        time.sleep(0.01)
+    ep_chassis.move(0,0,90).wait_for_completed()
+    ep_chassis.move(0.5,0,90).wait_for_completed()
 
-# def user_program_part(ep_robot):
-#     ep_chassis = ep_robot.chassis
-#     ep_chassis.move(4, 0, 0, 0, 0).wait_for_completed()

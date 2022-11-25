@@ -138,10 +138,9 @@ class SimulateInfoHandler(SensorSourceHandler):
         system_json={
             'type':'SYSTEM_TYPE',
             'info':{
-                'next_state': SystemState.NORMAL.name
+                'next_state': SystemState.INIT.name
             }
         }
-        self.angle_init_once = False
         self.sender_send_json(system_json, need_reply=False)
         return
     

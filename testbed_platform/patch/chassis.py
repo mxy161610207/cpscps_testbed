@@ -32,6 +32,7 @@ def _md_auto_stop_timer(self, api="drive_speed"):
 def md_drive_speed(self, x=0.0, y=0.0, z=0.0, timeout=None):
     """ 修改后的drive_speed
     """
+    print("__modify__ drive_speed")
     proto = protocol.ProtoChassisSpeedMode()
     proto._x_spd = util.CHASSIS_SPD_X_CHECKER.val2proto(x)
     proto._y_spd = util.CHASSIS_SPD_Y_CHECKER.val2proto(y)

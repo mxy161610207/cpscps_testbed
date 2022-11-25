@@ -13,7 +13,3 @@
 # testbed_platform 启动模块
 !testbed_platform/*.py
 
-# 文档说明
-!doc/
-
-

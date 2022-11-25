@@ -13,7 +13,6 @@ class LocationCalculater:
         server, grd_location_syncer, sim_location_syncer
         ):
         print("__init__ LocationCalculater start")
-        self.system_state=SystemState.INIT
 
         self.info_queue = queue.Queue(-1) # recv json format
         self.query_queue = queue.Queue(-1)
@@ -80,18 +79,7 @@ class LocationCalculater:
             self.bind_map.update(sim_irs_pos.dict_style,self.start_timer,self.time_list["send"])
 
     def switch_system_state(self,next_state:SystemState):
-        if next_state==SystemState.ADJUST:
-            if (self.system_state!=SystemState.NORMAL and self.system_state!=SystemState.ADJUST):
-                raise Exception("{} cannot convert to {}".format(self.system_state,next_state))
-        elif next_state==SystemState.NORMAL:
-            # if (self.system_state!=SystemState.ADJUST and self.system_state!=SystemState.INIT):
-            #     raise Exception("{} cannot convert to {}".format(self.system_state,next_state))
-            pass
-        elif next_state == SystemState.INIT:
-            self.location_grd.reset()
-            if (self.location_sim): self.location_sim.reset()
-
-        self.system_state = next_state
+        self.location_grd.change_state(next_state)
 
     def get_sensor_group(self):
         sensor_data = [0,0,0,0]
@@ -205,10 +193,8 @@ class LocationCalculater:
         pass
 
     def handle_angle_data(self,info):
-        angle=info['angle']
-        raw_angle=info['raw_angle']
-        self.location_grd.set_sdk_angle(angle)
-        self.location_grd.set_raw_sdk_angle(raw_angle)
+        yaw_ground_angle=info['yaw_ground_angle']
+        self.location_grd.set_yaw_ground_angle(yaw_ground_angle)
 
     def handle_system_data(self,info):
         self.switch_system_state(SystemState[info['next_state']])

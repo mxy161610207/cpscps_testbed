@@ -8,6 +8,7 @@ import time
 from location import location_server
 from ui import display_raiser
 from ui.controller import controller_raiser
+from ui.sensor import sensor_display
 
 from module import sdk_handler
 
@@ -45,6 +46,8 @@ if __name__ == '__main__':
     # --- 用户操控工具 ---
     platform_status_resources['control'] = Value('i',0)
     platform_message_resources['control'] = Queue(-1)
+
+    platform_status_resources['F_dis'] = Value('i',-1)
 
     # --- 多进程处理器定义 ---
     # 1) 小车状态进程
@@ -88,7 +91,18 @@ if __name__ == '__main__':
                 platform_message_resources,
                 platform_socket_address)
     )
-    proc_controller.is_alive()
+
+    # 5) 测距显示进程
+    process_name = 'raise_sensor'
+    proc_sensor = Process(
+        target=sensor_display.raiser,
+        args=(  process_name,
+                platform_status_resources,
+                platform_message_resources,
+                platform_socket_address)
+    )
+    proc_sensor.daemon = True
+    proc_sensor.start()
 
     # ------ 进程按顺序开启 -------
     # 1) 定位服务器进程

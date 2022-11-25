@@ -107,7 +107,7 @@ class SensorSourceInfo:
         return self._distance 
 
     def get_yaw_ground_angle(self):
-        return self._yaw_ground_angle 
+        return -self._yaw_ground_angle 
 
     def _set_cv2_image(self, img):
         self._cv2_image = img

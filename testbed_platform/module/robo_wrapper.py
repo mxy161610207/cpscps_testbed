@@ -59,7 +59,11 @@ class RoboMasterEPWrapper:
         # 使用_dij_move(0,0,0).wait_for_completed刷新一下
         # 注意必须在底盘没有Action时，调用该函数。
         # 判断方法：报错 Robot is already performing action(s)
-        # EP_ROBOT.chassis._dij_move(0,0,0).wait_for_completed()
+        # self._robomaster_ep.chassis._dij_move(0,0,0).wait_for_completed()
+        pass
+
+    def global_stop(self):
+        self._robomaster_ep.chassis._dij_drive_speed(0,0,0)
         pass
 
     def led_behavior(self,state):
@@ -101,8 +105,7 @@ class RoboMasterEPWrapper:
 
     def adjust(self,is_manual=False):
         if (not self._has_active_car): return
-        if self._timer_manager.adjust_status_start():
-            return 
+        self._timer_manager.adjust_status_start()
 
         if is_manual:
             while True:
@@ -142,7 +145,7 @@ class RoboMasterEPWrapper:
 
         ep_chassis=self._robomaster_ep.chassis
         
-        xy_speed=0.3
+        xy_speed=0.6
         z_speed=60
         if (action == 'W'):
             ep_chassis._dij_move(move_dis,0,0,xy_speed,z_speed).wait_for_completed()
@@ -173,35 +176,23 @@ class RoboMasterEPWrapper:
         else:
             pass
         
-        print("[sdk_handler] dji action success")
+        # print("[sdk_handler] dji action success")
 
-    def do_usr_action(self,action,move_dis=2,rot_deg=45,mute=False):
+    def do_move_api(self,args):
         ep_chassis=self._robomaster_ep.chassis
         
+        x,y,z = args['x'],args['y'],args['z']
         xy_speed=0.6
         z_speed=60
-        if (action == 'W'):
-            ep_chassis.move(move_dis,0,0,xy_speed,z_speed).wait_for_completed()
-        elif (action == 'S'):
-            ep_chassis.move(-move_dis,0,0,xy_speed,z_speed).wait_for_completed()
-        elif (action == 'A'):
-            ep_chassis.move(0,-move_dis,0,xy_speed,z_speed).wait_for_completed()
-        elif (action == 'D'):
-            ep_chassis.move(0,move_dis,0,xy_speed,z_speed).wait_for_completed()
-        elif (action == 'L'):
-            ep_chassis.move(0,0,rot_deg,xy_speed,z_speed).wait_for_completed()
-        elif (action == 'R'):
-            ep_chassis.move(0,0,-rot_deg,xy_speed,z_speed).wait_for_completed()
-        elif (action == 'l'):
-            ep_chassis.move(0,0,10,xy_speed,z_speed).wait_for_completed()
-        elif (action == 'r'):
-            ep_chassis.move(0,0,-10,xy_speed,z_speed).wait_for_completed()
-        elif (action == 'w'):
-            ep_chassis.move(0.1,0,0,xy_speed,z_speed).wait_for_completed()
-        elif (action == 'B'):
-            ep_chassis.move(0,0,180*self._rot_flip,xy_speed,z_speed).wait_for_completed()
-            self._rot_flip=-self._rot_flip
-        else:
-            pass
+
+        ep_chassis.move(x,y,z,xy_speed,z_speed).wait_for_completed()
         
         print("[sdk_handler] usr action success")
+
+    def do_drive_api(self,args,timeout=2):
+        ep_chassis=self._robomaster_ep.chassis
+
+        x,y,z = args['x'],args['y'],args['z']
+        ep_chassis.drive_speed(x,y,z,)
+
+        print("[sdk_handler] usr drive success")

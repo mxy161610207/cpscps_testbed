@@ -117,8 +117,8 @@ class DJIControllerPanel(BaseControllerPanel):
         
         grid_row+=1
         status_size = 10
-        self._status_text.grid(row=grid_row, column=grid_col,rowspan=status_size, columnspan=col_span,
-        sticky="nsew")
+        # self._status_text.grid(row=grid_row, column=grid_col,rowspan=status_size, columnspan=col_span,
+        # sticky="nsew")
 
         grid_row+=status_size
         self._panel_total_row = grid_row+1
@@ -213,7 +213,7 @@ class UsrControllerPanel(BaseControllerPanel):
             sensor_text.grid(row=grid_row, column=col, rowspan=1, columnspan=2, sticky="nsew")
 
             sensor_button = ActionButton(self,"查询",sensor_name,grid_row,col+2, ysize = 2)
-            self._button_list.append(sensor_button)
+            # self._button_list.append(sensor_button)
 
             sensor_result = tk.Label(self._window, text="None")
             sensor_result.grid(row=grid_row, column=col+4,columnspan= 3, sticky="nsew")
@@ -269,6 +269,7 @@ class UsrControllerPanel(BaseControllerPanel):
 
         args_element = self._action_info[api_code]
         args_json = {}
+        global F_dis
         # print(args_element)
         for k in args_element:
             args_str = args_element[k].get()
@@ -280,18 +281,25 @@ class UsrControllerPanel(BaseControllerPanel):
                 else:
                     val = 0.0
             
-            if (api_code == 'drive' or api_code == 'move'):
-                if (k=='timeout'):
-                    val = min(max(0.0,val),10.0)
-                elif k=='z' or k=='deg':
-                    val = min(max(0,val),360)
-                else:
-                    val = min(max(0.3,val),3)
-            elif api_code == 'sim_syncer':
-                if k=='deg':
-                    val = min(max(0,val),360)
-                else:
-                    val = min(max(300,val),900)
+            if (api_code == 'move' and k=='x' and val<0):
+                val = F_dis.value*0.001 - 0.2
+
+            if (api_code == 'move' and k=='x' and val>100):
+                val = 0.5
+            
+
+            # if (api_code == 'drive' or api_code == 'move'):
+            #     if (k=='timeout'):
+            #         val = min(max(0.0,val),10.0)
+            #     elif k=='z' or k=='deg':
+            #         val = min(max(0,val),360)
+            #     else:
+            #         val = min(max(0.3,val),3)
+            # elif api_code == 'sim_syncer':
+            #     if k=='deg':
+            #         val = min(max(0,val),360)
+            #     else:
+            #         val = min(max(300,val),900)
 
             args_json[k]=val
         
@@ -481,11 +489,16 @@ def raiser(
     platform_status_resources,
     platform_message_resources,
     platform_socket_address):
+    
+    global F_dis
+    F_dis = platform_status_resources['F_dis']
 
     print("Proc [{}] start".format(proc_name))
 
     controller_status = platform_status_resources['control']
     controller_message = platform_message_resources['control']
+
+
     
     # 当controller_status变化时 所有需要更新的模块
     global status_update_register

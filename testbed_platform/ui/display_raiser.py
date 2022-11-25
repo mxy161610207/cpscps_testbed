@@ -70,7 +70,12 @@ def init_guard_ax_set(ax,title_str):
     ylim_range = pc.E
     basic_set(ax,xlim_range,ylim_range,title_str)
 
-def init_simulate_ax_set(ax):
+def init_simulate_ax_set(ax,title_str):
+    xlim_range = pc.E*2
+    ylim_range = pc.E*2
+    basic_set(ax,xlim_range,ylim_range,title_str)
+
+def old_init_simulate_ax_set(ax):
     global sim_map
     xlim_range = sim_map.E()
     ylim_range = sim_map.E()
@@ -104,7 +109,7 @@ class PositionCanvas:
     _grid_col_sz = _grid_map + 3
     _grid_padx = 10
     _title_font = ('Times', 20)
-    _map_size = 300
+    _map_size = 400
     _map_padxy = _map_size//10
 
     def __init__(self, window, tag, name, x, y, syncer):
@@ -174,12 +179,15 @@ class PositionCanvas:
 
         # 初始化画布
         self._fig_ax.clear()
-        init_guard_ax_set(ax=self._fig_ax,title_str=self._name)
+        if (self._tag=="grd"):
+            init_guard_ax_set(ax=self._fig_ax,title_str=self._name)
+        else:
+            init_simulate_ax_set(ax=self._fig_ax,title_str=self._name)
 
         # 绘制当前位置
         self._create_pos_fig(
             position_info=position_info,
-            is_latest=True,aw_len=50
+            is_latest=True,aw_len=50 if self._tag=="grd" else 100
             )
 
         # TODO 绘制历史位置
@@ -256,11 +264,11 @@ class PositionCanvas:
 
     def _create_text(self):
         text = ScrolledText(self._window, bg='Gainsboro', width=25)
-        text.grid(
-            row=self._grid_row+1,
-            column=self._grid_col+self._grid_map,
-            rowspan=self._grid_map-2, columnspan=3,
-            sticky="nsew", padx=self._grid_padx)
+        # text.grid(
+        #     row=self._grid_row+1,
+        #     column=self._grid_col+self._grid_map,
+        #     rowspan=self._grid_map-2, columnspan=3,
+        #     sticky="nsew", padx=self._grid_padx)
         text.config(state="disabled")
         return text
 
@@ -271,11 +279,11 @@ class PositionCanvas:
         button = tk.Button(self._window, text="暂停",
                            command=self.button_pause, width=30)
         # 将按钮放置在主窗口内
-        button.grid(
-            row=self._grid_row+self._grid_map-1,
-            column=self._grid_col+self._grid_map,
-            rowspan=1, columnspan=1,
-            sticky="nsew", padx=20, pady=10)
+        # button.grid(
+        #     row=self._grid_row+self._grid_map-1,
+        #     column=self._grid_col+self._grid_map,
+        #     rowspan=1, columnspan=1,
+        #     sticky="nsew", padx=20, pady=10)
         return button
 
     def button_clear(self):
@@ -285,11 +293,11 @@ class PositionCanvas:
         button = tk.Button(self._window, text="清除",
                            command=self.button_clear, width=30)
         # 将按钮放置在主窗口内
-        button.grid(
-            row=self._grid_row+self._grid_map,
-            column=self._grid_col+self._grid_map,
-            rowspan=1, columnspan=1,
-            sticky="nsew", padx=20, pady=10)
+        # button.grid(
+        #     row=self._grid_row+self._grid_map,
+        #     column=self._grid_col+self._grid_map,
+        #     rowspan=1, columnspan=1,
+        #     sticky="nsew", padx=20, pady=10)
         return button
 
     def text_show(self, msg, clear=True, ignore_freeze=False):

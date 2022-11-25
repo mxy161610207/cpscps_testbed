@@ -32,6 +32,8 @@ class DriveSpeedAdjuster():
         # 一直接受proto的程序
         self._event = None
         self.monitor_thread = threading.Thread(target=self.run_monitor)
+        self.monitor_thread.daemon = True
+        self.monitor_thread.start()
 
     def _encode_drive_proto(self, proto):
         encode_json={
@@ -82,26 +84,24 @@ class DriveSpeedAdjuster():
         
         self._proto_register_lock.release()
             
-
     def run_monitor(self):
         while True:
-            print("wait next proto")
             self._proto_register_event.wait()
-            print("wait get")
+            print("_proto_register_event get")
             self._proto_register_event.clear()
 
-            if (self.cur_proto == None):
+            if (self._run_proto is None):
                 raise PlatformException("register proto but None")                
             
             sdk_handler.SECURITY_MONITOR.register_and_start( 
-                obj=self.cur_proto, 
+                obj=self._run_proto, 
                 check_distance=300)
 
             sdk_handler.SECURITY_MONITOR.wait_for_trigger()
 
             # 如果触发者是其他人
-            if not sdk_handler.SECURITY_MONITOR.is_accessable(self.cur_proto):
-                raise PlatformException("SECURITY_MONITOR not accessable for proto {}".format(self.cur_proto))
+            if not sdk_handler.SECURITY_MONITOR.is_accessable(self._run_proto):
+                raise PlatformException("SECURITY_MONITOR not accessable for proto {}".format(self._run_proto))
 
             # 确实是被当前proto触发
             set_reason = sdk_handler.SECURITY_MONITOR.get_set_reason()
@@ -114,18 +114,22 @@ class DriveSpeedAdjuster():
             elif (set_reason == "END"):
                 self.proto_clear()
 
-            print("---end _once_turn")
+            print("---drive end _once_turn")
     
     def _recover_proto(self):
-        self._proto_register_event.acquire()
+        # ERROR 这里逻辑有问题 只能adjust一次
+        self._proto_register_lock.acquire()
 
         print("recover :x_spd:{0:f}, y_spd:{1:f}, z_spd:{2:f}".format(self._run_proto._x_spd, self._run_proto._y_spd, self._run_proto._z_spd))
 
         sdk_handler.PHY_SENDER.send_action_info(self._encode_drive_proto(self._run_proto))
         self._chassis._send_sync_proto(self._run_proto)
+        self._proto_register_event.set()
 
-        self._proto_register_event.release()
+        self._proto_register_lock.release()
 
     def drive_adjust(self):
-        sdk_handler.SECURITY_MONITOR.adjust("drive_speed",self)
+        sdk_handler.EP_ROBOT.chassis._dij_drive_speed(0, 0, 0)
+        print("stop_here")
+        sdk_handler.SECURITY_MONITOR.security_monitor_adjust("drive_speed",self)
 
