@@ -5,6 +5,9 @@
 !.gitignore
 !README.md
 
+# user_app/
+!user_app/
+
 # testbed_platform/
 !testbed_platform/
 **/__pycache__
