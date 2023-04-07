@@ -3,6 +3,7 @@ from robomaster.chassis import *
 
 import threading,time,math
 
+from robomaster import dds
 from robomaster import module
 from robomaster import logger
 from robomaster import protocol
@@ -49,6 +50,73 @@ def md_move(self, x=0, y=0, z=0, xy_speed=0.5, z_speed=30):
     action = SafeChassisMoveAction(self, x, y, z, xy_speed, z_speed)
     return action
 
+
+# 订阅位置
+def sys_sub_handler(self, sub_info):
+        """ mxy_edit
+        真实位置传感器 sys_sub 的callback函数
+        将真实位置值发送给server
+        """
+        sdk_handler.PHY_SENDER.set_position_data_info(sub_info)
+        pass
+
+
+# 数据订阅接口
+def sys_sub(self, cs=0, freq=5, callback=None, *args, **kw):
+    """ mxy_edit
+    订阅底盘位置信息
+    在robot.initialize中被首次使用
+
+    :param cs: int: [0,1] 设置底盘位置的坐标系，0 机器人当前位置，1 机器人上电位置
+    :param freq: enum: (1, 5, 10, 20, 50) 设置数据订阅数据的推送频率，单位 Hz
+    :param callback: 回调函数，返回数据 (x, y, z):
+
+                    :x: x轴方向距离，单位 m
+                    :y: y轴方向距离，单位 m
+                    :z: z轴方向旋转角度，单位 °
+
+    :param args: 可变参数
+    :param kw: 关键字参数
+    :return: bool: 数据订阅结果
+    """
+    print("开启platfrom订阅: position")
+
+    sub = self._robot.dds
+    subject = offical.PositionSubject(cs)
+    self._max_freq = 10
+    subject.freq = self._max_freq
+    callback = self.sys_sub_handler
+
+    self._subject = subject
+
+    return sub.add_subject_info(subject, callback, args, kw)
+
+def sys_unsub(self):
+    """ mxy_edit 
+    取消订阅底盘位置信息
+
+    :return: bool: 取消数据订阅的结果
+    """
+    sub_dds = self._robot.dds
+    return sub_dds.del_subject_info(dds.DDS_POSITION)
+
+def md_sub_position(self, cs=0, freq=5, callback=None, *args, **kw):
+    """ mxy_edit
+        用户调用的 订阅底盘位置信息
+
+        原: 大疆提供的订阅接口，新增一个Subject
+        改：在sys的Subject上 新增usr_sub信息
+    """
+    
+    usr_loop = self._max_freq // freq
+    return self._subject.set_usr_sub(usr_loop,callback,args,kw)
+
+def md_unsub_position(self):
+    """ mxy_edit
+    用户调用的 取消订阅底盘位置信息
+    """
+    return self._subject.set_usr_unsub()
+
 '''
 class ChassisMoveAction(action.Action):
 '''
@@ -74,6 +142,14 @@ offical.Chassis._dij_move = offical.Chassis.move
 offical.Chassis._auto_stop_timer = _md_auto_stop_timer
 offical.Chassis.drive_speed = md_drive_speed
 offical.Chassis.move = md_move
+
+# 位置传感器相关，没用。
+# offical.Chassis.sys_sub_handler = sys_sub_handler
+# offical.Chassis.sys_sub = sys_sub
+# offical.Chassis.sys_unsub = sys_unsub
+
+# offical.Chassis.sub_position = md_sub_position
+# offical.Chassis.unsub_position = md_unsub_position
 
 offical.ChassisMoveAction._encode_json = _encode_json
 

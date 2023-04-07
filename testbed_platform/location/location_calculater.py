@@ -193,7 +193,7 @@ class LocationCalculater:
         pass
 
     def handle_angle_data(self,info):
-        yaw_ground_angle=info['yaw_ground_angle']
+        yaw_ground_angle=info['sdk_yaw_angle']
         self.location_grd.set_yaw_ground_angle(yaw_ground_angle)
 
     def handle_system_data(self,info):

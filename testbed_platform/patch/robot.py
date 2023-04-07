@@ -40,6 +40,7 @@ def md_initialize(self, conn_type=config.DEFAULT_CONN_TYPE, proto_type=config.DE
     sdk_handler.PHY_SENDER.set_online()
     sdk_handler.PHY_SENDER.sys_add_sub_module(self.sensor)
     sdk_handler.PHY_SENDER.sys_add_sub_module(self.gimbal)
+    # sdk_handler.PHY_SENDER.sys_add_sub_module(self.chassis)
     sdk_handler.PHY_SENDER.sys_sub_all()
 
     # """ 

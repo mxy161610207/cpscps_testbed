@@ -128,7 +128,7 @@ class LocationList:
         return not (self._sim_pair is None)
 
     def set_yaw_ground_angle(self,yaw_ground_angle):
-        self._yaw_ground_angle = Position.round_degrees(-yaw_ground_angle)
+        self._yaw_ground_angle = Position.round_degrees(yaw_ground_angle)
     
     def calc_ideal_angle(self):
         return Position.round_degrees(self._yaw_ground_angle)

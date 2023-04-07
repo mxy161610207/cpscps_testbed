@@ -14,6 +14,9 @@ class PhysicalInfoHandler(SensorSourceHandler):
         self._position_syncer = syncer
         self._car_handler=car_handler
         self._sys_sub_modules = []
+        self._init_angle = None
+        self._init_x = None
+        self._init_y = None
 
         # python list is thread-safe
         # 暂存需要回复的数据包
@@ -86,6 +89,7 @@ class PhysicalInfoHandler(SensorSourceHandler):
 
     def sys_sub_all(self):
         print("开启platfrom订阅")
+
         for module in self._sys_sub_modules:
             module.sys_sub()
 
@@ -126,14 +130,19 @@ class PhysicalInfoHandler(SensorSourceHandler):
 
     def set_angle_data_info(self, data_info):
         self.info._set_angle_data_info(data_info)
-        # d - yaw_ground_angle: 上电时刻yaw轴角度
+        # d - yaw_ground_angle: 从上电时刻开始的yaw轴角度
         # 小车一开始向x轴正方向放，保证上电时刻=0
         a,b,c,d = data_info
 
+        # 初始0度 左转 z=90 angle变-90 所以取反 
+        if (self._init_angle==None):
+            self._init_angle  = d
+
+        current_angle = -(d-self._init_angle)
         angle_json={
             'type':'ANGLE_TYPE',
             'info':{
-                'yaw_ground_angle':d
+                'sdk_yaw_angle':current_angle
             }
         }
 
