@@ -238,7 +238,6 @@ class PositionCanvas:
         fig = mplfig.Figure()
 
         canvas = FigureCanvasTkAgg(fig, master=self._window)
-        canvas.get_renderer
         canvas.get_tk_widget().configure(bg='white',
                                          height=self._map_size+self._map_padxy,
                                          width=self._map_size+self._map_padxy)
