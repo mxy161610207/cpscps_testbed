@@ -4,7 +4,8 @@ from enum import Enum
 FB_MODIFY = 112
 LR_MODIFY = 118
 
-E = 2420
+# E = 2420
+E = 2720
 
 LOSS_TIME = 30
 
