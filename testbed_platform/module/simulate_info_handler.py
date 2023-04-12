@@ -5,6 +5,7 @@ import random
 from .sensor_source import SensorSourceHandler
 from location.location_config import SystemState
 from .platform_exception import PlatformException
+from .noisy_generator import NoisyGenerator
 
 # Data from Simulate  
 class SimulateInfoHandler(SensorSourceHandler):
@@ -16,69 +17,51 @@ class SimulateInfoHandler(SensorSourceHandler):
         self._car_handler=car_handler
         self._sys_sub_modules = []
 
+        self.noisy_generator = NoisyGenerator()
+
         # python list is thread-safe
         # 暂存需要回复的数据包
         self._wait_list=[]
         self._wait_list_lock=threading.Lock()
         print("__init__ SimulateInfoHandler end")
 
-    # 发送端 - 小车发送数据包的处理
-    # 1) 添加term_id和发送时间time
-    # 2) 对需要回复的packet, 添加进等待队列
-    def sender_send_json(self,send_json,need_reply = False):
-        send_json['term_id']=self.sender._get_term_id()
-        send_json['send_time']=time.time()
 
-        if (need_reply):
-            # print("[query]",send_json)
-            self._wait_list_lock.acquire()
-            self._wait_list.append(send_json)
-            self._wait_list_lock.release()
+    def handle_recv_json(self, recv_json):
+        print("[get sim_engine reply_json]",recv_json)
         
+        json_type = recv_json['type']
+        json_data = recv_json['data']
+
+        if json_type=='distance':
+            dist_json = self.noisy_generator.convert_to_sdk_distance(json_data)
+            F,B,L,R = dist_json['result']
+            self.info._set_sensor_data_info([F,R,B,L])
+
+        elif json_type == 'event':
+            # 发生碰撞了。
+            pass
+
+        elif json_type == 'figure':
+            # 啥也不干
+            pass
+
+    # 发送端 - 小车发送数据包的处理
+    def sender_send_json(self,send_json):
+        # send_json['term_id']=self.sender._get_term_id()
+        # send_json['send_time']=time.time()
+
         send_info=json.dumps(send_json)
         self.sender.send_msg(send_info)
 
         # if send_json['type']=='SENSOR_TYPE':
         #     print("sd:",send_json)
-        
-        if (need_reply):
-            send_json['status']='wait'
-            if (send_json['type']!='SYNC'):
-                print("[query]", send_json)
-        pass
 
-    # 接受端 - 小车收到回复数据包的处理
-    # "query_id": 对发送的指定term_id的回复
-    # 更新json，追加回复，用户处理
-    # 超时 删除数据包
-    def handle_recv_json(self,recv_json):
-        print("[get reply_json]",recv_json)
-        
-        # 莫名奇妙的回复
-        if ("query_id" not in recv_json):
-            pass
 
-        qid = recv_json['query_id']
-        self._wait_list_lock.acquire()
+    # 开一个线程 一直发送小车位置更新
+    
+    # 发送 config 场景配置
+    # 发送 position 小车位置更新
 
-        n=len(self._wait_list)
-        removed_json=[]
-        for i in range(n):
-            cur_json=self._wait_list[i]
-            if (cur_json['term_id']==qid):
-                cur_json['reply']= recv_json
-                cur_json['status']='get'
-                removed_json.append(cur_json)
-            else:
-                if (time.time()-cur_json['send_time']>5):
-                    cur_json['status']='timeout'
-                    removed_json.append(cur_json)
-        
-        for rjson in removed_json:
-            self._wait_list.remove(rjson)
-
-        self._wait_list_lock.release()
-        return
 
     def query_sensor_data_info(self, sensor_type):
         position_json = self.query_position()
@@ -104,21 +87,6 @@ class SimulateInfoHandler(SensorSourceHandler):
         data_info = query_json['reply']['info']
         return data_info
 
-    def update_distance_data_info(self):
-        # {'F':f, 'L':l , 'B':b, 'R':r }
-        dist_dict = self.query_sensor_data_info(self,'distance')
-        data_info = [dist_dict['F'],dist_dict['R'],dist_dict['B'],dist_dict['L']]
-        
-        self.info._set_sensor_data_info(data_info)
-        return data_info
-        
-    def update_angle_data_info(self):
-        # _,_,_,d
-        angle_val = self.query_sensor_data_info(self,'angle')
-        data_info = [0,0,0,angle_val]
-        
-        self.info._set_angle_data_info(data_info)
-        return data_info
 
     def send_adjust_status(self,is_on=True):
         if is_on:
@@ -133,7 +101,7 @@ class SimulateInfoHandler(SensorSourceHandler):
         }
         self.sender_send_json(system_json, need_reply=False)
         return
-
+    
     def location_server_reset(self):
         system_json={
             'type':'SYSTEM_TYPE',
@@ -144,6 +112,7 @@ class SimulateInfoHandler(SensorSourceHandler):
         self.sender_send_json(system_json, need_reply=False)
         return
     
+    # [unused] 实际未用
     def send_server_sync_json(self):
         # 仅同步位置
         sync_json={

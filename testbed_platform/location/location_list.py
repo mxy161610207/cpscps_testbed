@@ -218,6 +218,7 @@ class LocationList:
         cur_pos_cand.set_is_fake_point()
         return cur_pos_cand
 
+    # 当物理小车进行一次移动，并且虚拟小车同时也应该运用本次移动时调用
     def apply_motion(self,motion):
         '''
             only for sim_tree

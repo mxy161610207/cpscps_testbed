@@ -3,7 +3,6 @@ import socket
 import queue
 import threading
 import warnings
-import copy
 import json
 
 from abc import abstractmethod
@@ -92,7 +91,7 @@ class SensorSourceInfo:
         self._pitch_ground_angle = 0
         self._cv2_image = None
 
-    def _set_sensor_data_info(self, data_info):
+    def _set_sensor_data_info(self, data_info): # F,R,B,L
         self._distance = data_info[:]
         # if (self._tag=='S'):
         #     d = self._distance
@@ -138,6 +137,7 @@ class SensorSourceHandler:
     def handle_recv_json(self,recv_json):
         pass
 
+    # [Unused]
     @classmethod
     def send_server_sync_json(self, is_reset = False):
         pass

@@ -13,7 +13,7 @@ def usr_data_info(self):
     实现了虚函数 usr_data_info
     usr_data_info 根据虚拟端在线情况，返回真实值or虚拟值
     """
-    return sdk_handler.SIMULATE_MSG._distance
+    return sdk_handler.SIM_SENDER.info.get_sensor_data_info()[:]
 #     print("usr_info",platform.SIMULATE_MSG._distance)
 #     if platform.is_online():    
 #         # print("usr_info",platform.SIMULATE_MSG._distance)

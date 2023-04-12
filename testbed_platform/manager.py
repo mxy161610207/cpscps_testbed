@@ -12,6 +12,12 @@ from ui.sensor import sensor_display
 
 from module import sdk_handler
 
+def init_position_syncer(syncer):
+    syncer['x'] = 0
+    syncer['y'] = 0
+    syncer['deg'] = 0
+    syncer['rad'] = 0
+
 
 if __name__ == '__main__': 
     # 系统多进程资源
@@ -34,6 +40,9 @@ if __name__ == '__main__':
     platform_message_resources['location'] = Queue(-1)
     platform_message_resources['grd_position'] = platform_manager.dict()
     platform_message_resources['sim_position'] = platform_manager.dict()
+
+    init_position_syncer(platform_message_resources['grd_position'])
+    init_position_syncer(platform_message_resources['sim_position'])
 
     # --- SDK通信工具 ---
     platform_status_resources['sdk'] = Value('i',0)

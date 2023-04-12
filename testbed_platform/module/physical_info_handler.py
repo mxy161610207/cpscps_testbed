@@ -2,6 +2,7 @@ import threading
 import json
 import time
 import random
+import copy
 from .sensor_source import SensorSourceHandler
 from location.location_config import SystemState
 
@@ -150,7 +151,6 @@ class PhysicalInfoHandler(SensorSourceHandler):
         # print("to_send",angle_json)
         return
 
-
     def send_action_info(self,action_info):
         # action_info = "move,x,y,z,xy_spd,z_spd"
         action_json={
@@ -178,15 +178,10 @@ class PhysicalInfoHandler(SensorSourceHandler):
         return
 
     def location_server_reset(self):
-        system_json={
-            'type':'SYSTEM_TYPE',
-            'info':{
-                'next_state': SystemState.NORMAL.name
-            }
-        }
-        self.sender_send_json(system_json, need_reply=False)
-        return
+        # False 是 切换回 SystemState.NORMAL
+        self.send_adjust_status(is_on=False)
 
+    # 如果虚拟引擎汇报了初始化后的小车位置，定位计算器需要更新。
     def simulate_syncer_update(self,pos_info):
         syncer_json={
             'type':'SIMULATE',
@@ -195,6 +190,7 @@ class PhysicalInfoHandler(SensorSourceHandler):
         self.sender_send_json(syncer_json, need_reply=False)
         return
     
+    # [Unused]
     def send_server_sync_json(self, is_reset = False):
         sync_json={
             'type':'SYNC',
@@ -217,8 +213,19 @@ class PhysicalInfoHandler(SensorSourceHandler):
             return False
         return True
 
-    # TODO 既然有了syncer，除了 stop tag，其他查询应该直接从sync获取
+    # 从syncer获取数据
     def query_position(self):
+        position_json = {
+            'x': self._position_syncer['x'],
+            'y': self._position_syncer['y'],
+            'deg': self._position_syncer['deg'],
+            'rad': self._position_syncer['rad'],
+        }
+        return position_json
+
+    # TODO 既然有了syncer，除了 stop tag，其他查询应该直接从sync获取
+    # [此函数已废弃，原本是从server发查询等回复，现在变成从syncer获取数据]
+    def _unused_query_position(self):
         query_json={
             'type':'QUERY',
             'info':{

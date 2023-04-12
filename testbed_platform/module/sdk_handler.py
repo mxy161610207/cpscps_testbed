@@ -28,9 +28,9 @@ def create_car_handler(
 
     # 和真实小车建立连接
     global EP_ROBOT
+    
     EP_ROBOT = car_handler.get_initialized_robot()
-
-    EP_ROBOT.set_robot_mode(mode=robot.CHASSIS_LEAD)
+    # EP_ROBOT.set_robot_mode(mode=robot.CHASSIS_LEAD)
     EP_ROBOT.led.set_led(comp="all", r=200, g=200, b=200)
 
     # 确保各种xxx_sub 正常运行
@@ -82,7 +82,6 @@ def raiser(
 
     location_server_addr = platform_socket_address['location']
     simulate_engine_addr = platform_socket_address['sim_engine']
-
     
     grd_syncer = platform_message_resources['grd_position']
     sim_syncer = platform_message_resources['sim_position']
@@ -299,15 +298,4 @@ def raiser(
 
 #     user_program_part(EP_ROBOT)
 
-#     print("Proc [{}] end".format(proc_name))
-def get_front_distance():
-    pass
-
-def user_program_part(ep_robot):
-    ep_chassis = ep_robot.chassis
-    ep_chassis.drive_speed(0.6,0,0)
-    while (get_front_distance()>300):
-        time.sleep(0.01)
-    ep_chassis.move(0,0,90).wait_for_completed()
-    ep_chassis.move(0.5,0,90).wait_for_completed()
-
+#     print("Proc [{}] end".format(proc_name)

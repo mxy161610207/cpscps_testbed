@@ -2,9 +2,9 @@ import sys
 import matplotlib.pyplot as plt
 from random import randint,seed
 
-WIDTH  = 4
-HEIGHT = 4
-# sys.setrecursionlimit(WIDTH * HEIGHT)
+WIDTH  = 10
+HEIGHT = 10
+sys.setrecursionlimit(WIDTH * HEIGHT)
 
 seed()
 
@@ -69,6 +69,8 @@ def shuffle(dX, dY):
 		dX[i], dX[j] = dX[j], dX[i]
 		dY[i], dY[j] = dY[j], dY[i]
 
+connect = []
+
 def DFS(X, Y, edgeList, visited):
 	dX = [0,  0, -1, 1]
 	dY = [-1, 1, 0,  0]
@@ -80,6 +82,7 @@ def DFS(X, Y, edgeList, visited):
 			if not visited[nextY][nextX]:
 				visited[nextY][nextX] = True
 				commonEdge = getCommonEdge(X, Y, nextX, nextY)
+				connect.append((X,Y,nextX,nextY))
 				if commonEdge in edgeList:
 					edgeList.remove(commonEdge)
 				DFS(nextX, nextY, edgeList, visited)
@@ -89,8 +92,8 @@ plt.title('Maze')
 edgeList = initEdgeList()
 visited  = initVisitedList()
 DFS(0, 0, edgeList, visited)
-edgeList.remove((0, 0, 0, 1))
-edgeList.remove((WIDTH, HEIGHT-1, WIDTH, HEIGHT))
+# edgeList.remove((0, 0, 0, 1))
+# edgeList.remove((WIDTH, HEIGHT-1, WIDTH, HEIGHT))
 for edge in edgeList:
 	drawLine(edge[0], edge[1], edge[2], edge[3])
 
@@ -98,6 +101,13 @@ with open("maze.txt","w") as f:
 	print(len(edgeList),WIDTH,HEIGHT,file=f)
 
 	for edge in edgeList:
+		str_tuple = " ".join(str(i) for i in edge)
+		print(str_tuple,file=f)
+
+with open("connect.txt","w") as f:
+	print(len(connect),WIDTH,HEIGHT,file=f)
+
+	for edge in connect:
 		str_tuple = " ".join(str(i) for i in edge)
 		print(str_tuple,file=f)
     
