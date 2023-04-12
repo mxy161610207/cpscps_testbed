@@ -109,7 +109,7 @@ class PositionCanvas:
     _grid_col_sz = _grid_map + 3
     _grid_padx = 10
     _title_font = ('Times', 20)
-    _map_size = 400
+    _map_size = 800
     _map_padxy = _map_size//10
 
     def __init__(self, window, tag, name, x, y, syncer):
@@ -141,10 +141,11 @@ class PositionCanvas:
 
     def _create_title(self):
         title = tk.Label(self._window, text=self._name, font=self._title_font)
-        title.grid(
-            row=self._grid_row, column=self._grid_col,
-            rowspan=1, columnspan=self._grid_map,
-            sticky="nsew")
+        if (self._tag=='grd'):
+            title.grid(
+                row=self._grid_row, column=self._grid_col,
+                rowspan=1, columnspan=self._grid_map,
+                sticky="nsew")
         return title
 
     def _create_pos_fig(self, position_info,
@@ -241,10 +242,12 @@ class PositionCanvas:
         canvas.get_tk_widget().configure(bg='white',
                                          height=self._map_size+self._map_padxy,
                                          width=self._map_size+self._map_padxy)
-        canvas.get_tk_widget().grid(
-            row=self._grid_row+1, column=self._grid_col,
-            rowspan=self._grid_map, columnspan=self._grid_map,
-            sticky="nsew", padx=self._grid_padx)
+        
+        if (self._tag=='grd'):
+            canvas.get_tk_widget().grid(
+                row=self._grid_row+1, column=self._grid_col,
+                rowspan=self._grid_map, columnspan=self._grid_map,
+                sticky="nsew", padx=self._grid_padx)
 
         ax = fig.add_subplot(111, aspect='equal',
                              autoscale_on=False, xlim=[0, 6], ylim=[-3, 3])
@@ -379,9 +382,10 @@ class PlatformEnterButton(PlatformButton):
 
     def _create_button_entry(self):
         button_entry = tk.Entry(self._window)
-        button_entry.grid(row=self._grid_row,
-                          column=3, rowspan=1, columnspan=1,
-                          sticky="nsew", padx=20, pady=10)
+        if (self._tag=='grd'):
+            button_entry.grid(row=self._grid_row,
+                            column=3, rowspan=1, columnspan=1,
+                            sticky="nsew", padx=20, pady=10)
         return button_entry
 
 def my_root_window_set():
