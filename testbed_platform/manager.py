@@ -40,9 +40,11 @@ if __name__ == '__main__':
     platform_message_resources['location'] = Queue(-1)
     platform_message_resources['grd_position'] = platform_manager.dict()
     platform_message_resources['sim_position'] = platform_manager.dict()
+    platform_message_resources['fake_position'] = platform_manager.dict()
 
     init_position_syncer(platform_message_resources['grd_position'])
     init_position_syncer(platform_message_resources['sim_position'])
+    init_position_syncer(platform_message_resources['fake_position'])
 
     # --- SDK通信工具 ---
     platform_status_resources['sdk'] = Value('i',0)
@@ -57,6 +59,16 @@ if __name__ == '__main__':
     platform_message_resources['control'] = Queue(-1)
 
     platform_status_resources['F_dis'] = Value('i',-1)
+    platform_status_resources['sim_distance'] = platform_manager.dict()
+
+    
+    platform_status_resources['adjust'] = Value('i',0)
+
+    tmp = platform_status_resources['sim_distance'] 
+    tmp['F']=0
+    tmp['B']=0
+    tmp['L']=0
+    tmp['R']=0
 
     # --- 多进程处理器定义 ---
     # 1) 小车状态进程

@@ -192,6 +192,7 @@ class SafeChassisMoveAction(action.Action):
 
         if (dis[min_id]>210): return 
         
+        # to adjust at beginning
         sdk_handler.PHY_SENDER.send_adjust_status(is_on=True)
         print("start at an danger place")
         self.move_adjust(is_manual=False)
@@ -234,7 +235,9 @@ class SafeChassisMoveAction(action.Action):
             # set by _auto_distance_security_check()
             # _actual_action stop but not set completed,
             # action_compelted_monitor() still wait! 
+            sdk_handler.PHY_SENDER.send_adjust_status(is_on=True)
             self._actual_action._changeto_state(action.ACTION_SUCCEEDED)
+            
             print("+++ set actual_action completed")
             self.move_adjust()
 

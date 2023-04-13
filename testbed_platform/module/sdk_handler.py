@@ -6,13 +6,13 @@ from robomaster import robot
 from .robo_wrapper import RoboMasterEPWrapper
 from .platform_exception import PlatformException
 
-def create_car_handler(
-        location_server_addr,physical_sender_addr,grd_syncer,
-        simulate_engine_addr,simulate_sender_addr,sim_syncer):
+def create_car_handler(adjust_state,
+        location_server_addr,physical_sender_addr,grd_syncer,sdk_syncer,
+        simulate_engine_addr,simulate_sender_addr,sim_syncer,sim_distance):
     # 获取车的handler，设置监视资源
-    car_handler = RoboMasterEPWrapper(
-        location_server_addr,physical_sender_addr,grd_syncer,
-        simulate_engine_addr,simulate_sender_addr,sim_syncer)
+    car_handler = RoboMasterEPWrapper(adjust_state,
+        location_server_addr,physical_sender_addr,grd_syncer,sdk_syncer,
+        simulate_engine_addr,simulate_sender_addr,sim_syncer,sim_distance)
 
     global CAR_HANDLER, PHY_INFO, PHY_SENDER, SIM_SENDER
 
@@ -61,6 +61,25 @@ def closer(
     sdk_platform_message.put(json.dumps(close_json))
     return
 
+def run(ep_robot,sensor):
+    ep_chassis = ep_robot.chassis
+
+    while True:
+        dis_F = sensor['F']
+        dis_R = sensor['R']
+        print("**********", dis_F,dis_R)
+        if dis_R<600:
+            if (dis_F<300):
+                # ep_chassis.drive_speed(0,0,0)
+                ep_chassis.move(0,0,0,0.5).wait_for_completed()
+                ep_chassis.move(0,0,93,0.5).wait_for_completed()
+            else:
+                ep_chassis.move((dis_F-300)*0.001,0,0,0.5).wait_for_completed()
+        else:
+            ep_chassis.move(0,0,-90,0.5).wait_for_completed()
+            ep_chassis.move(0.6,0,0,0.5).wait_for_completed()
+        time.sleep(1)
+
 def raiser(
     proc_name, 
     platform_status_resources,
@@ -84,15 +103,19 @@ def raiser(
     simulate_engine_addr = platform_socket_address['sim_engine']
     
     grd_syncer = platform_message_resources['grd_position']
+    sdk_syncer = platform_message_resources['fake_position']
     sim_syncer = platform_message_resources['sim_position']
+
+    sim_distance =  platform_status_resources['sim_distance'] 
+    adjust_state = platform_status_resources['adjust']
 
     real_car = True
 
     if sdk_platform_status.value == 0:
         if real_car:
-            create_car_handler(
-                location_server_addr,physical_sender_addr,grd_syncer,
-                simulate_engine_addr,simulate_sender_addr,sim_syncer)
+            create_car_handler(adjust_state,
+                location_server_addr,physical_sender_addr,grd_syncer,sdk_syncer,
+                simulate_engine_addr,simulate_sender_addr,sim_syncer,sim_distance)
         else:
             # time.sleep(2)
             pass
@@ -111,7 +134,7 @@ def raiser(
         if (global_status.value == -1):
             break
         
-        # print("get {}".format(action_json_str))
+        print("get {}".format(action_json_str))
 
         action_type, action_info = action_json['type'], action_json['info']
         reply_json={
@@ -144,6 +167,22 @@ def raiser(
             elif (action_info['status'] == 'shutdown'):
                 global_status.value == -1
                 break
+
+            elif (action_info['status'] == 'run'):
+                # action = {'x':0.1,'y':0.0,'z':0.0}
+                # CAR_HANDLER.do_drive_api(action,timeout=5)
+                # t = time.time()
+                # while(time.time()-t<3):
+                #     f_dir = open("D:\\GitHub\\cpscps_testbed\\unity_dir.txt","r")
+                #     sensor_info = list(map(int,f_dir.read().split()))
+                #     f_dir.close()
+                #     print("=========>",sensor_info)
+                #     time.sleep(0.1)
+                
+                # action = {'x':0.0,'y':0.0,'z':0.0}
+                # CAR_HANDLER.do_drive_api(action,timeout=5)
+                run(EP_ROBOT,sim_distance)
+                pass
 
         elif action_type == 'SENSOR':
             sensor_type =  action_info['sensor_type']  

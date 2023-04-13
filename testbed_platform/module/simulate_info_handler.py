@@ -1,7 +1,7 @@
 import threading
 import json
 import time
-import random
+import random,math
 from .sensor_source import SensorSourceHandler
 from location.location_config import SystemState
 from .platform_exception import PlatformException
@@ -9,15 +9,21 @@ from .noisy_generator import NoisyGenerator
 
 # Data from Simulate  
 class SimulateInfoHandler(SensorSourceHandler):
-    def __init__(self,syncer, self_addr,server_addr,car_handler):
+    def __init__(self,syncer, self_addr,server_addr,car_handler,sim_distance):
         print("__init__ SimulateInfoHandler start")
         super().__init__(self_addr,server_addr ,tag = 'S')
         
         self._position_syncer = syncer
+        self._distance_syncer = sim_distance
         self._car_handler=car_handler
         self._sys_sub_modules = []
 
         self.noisy_generator = NoisyGenerator()
+
+        self.last_position = None
+        self.position_thread = threading.Thread(target=self.send_position, args=())
+        self.position_thread.daemon = True
+        self.position_thread.start()
 
         # python list is thread-safe
         # 暂存需要回复的数据包
@@ -25,17 +31,94 @@ class SimulateInfoHandler(SensorSourceHandler):
         self._wait_list_lock=threading.Lock()
         print("__init__ SimulateInfoHandler end")
 
+    # 返回值：
+    # x - 向前移动距离
+    # y - 向左移动距离
+    # deg - 逆时针旋转角度
+    def get_diff_json(self,last,cur):
+        # rad = (rad - math.pi/2.0)
+        rad = math.radians(last['deg'])
 
+        dx = cur['x']-last['x']
+        dy = cur['y']-last['y']
+        ddeg = cur['deg']-last['deg']
+        drad = math.radians(ddeg)
+
+        rot_mat = [ [math.cos(rad), math.sin(rad)],     # 前方
+                    [-math.sin(rad), math.cos(rad)]]    # 左方
+        # print("rot_mat =",rot_mat)
+        # print("dx dy =",dx,dy)
+        tx = rot_mat[0][0]*dx + rot_mat[0][1]*dy
+        ty = rot_mat[1][0]*dx + rot_mat[1][1]*dy
+        # print("tx ty =",tx,ty)
+
+        diff_json={
+            'x':tx,
+            'y':ty,
+            'deg':ddeg,
+            'rad':drad
+        }
+
+        return diff_json
+
+    def send_position(self):
+        # fake instead
+
+        time.sleep(1)
+        self.last_position = self._car_handler._phy_msg_sender.query_position()
+
+        while True:
+            cur_position = self._car_handler._phy_msg_sender.query_position()
+            diff = {}
+            has_diff=False
+
+
+            diff_json = self.get_diff_json(self.last_position,cur_position)
+
+            for key in ['x','y','deg','rad']:
+                if (abs(diff_json[key])>0.1): 
+                     has_diff = True
+
+                    
+            if (not has_diff): 
+                time.sleep(0.1)
+                continue
+            
+            # print(self.last_position)
+            # print(diff_json)
+
+            # print (cur_position,diff)
+            try:
+                if (self._car_handler._adjust_state.value == 0):
+                    # raise Exception("None")
+                    print("normal")
+                    self.sender_send_json(diff_json)
+                else:
+                    print("drop",diff_json)
+            except Exception as e:
+                # print(e)
+                # print(self.sender._server_addr)
+                pass
+            else:
+                self.last_position = cur_position
+                
+            time.sleep(0.05)
+                
     def handle_recv_json(self, recv_json):
-        print("[get sim_engine reply_json]",recv_json)
+        # print("[get sim_engine reply_json]",recv_json)
         
         json_type = recv_json['type']
-        json_data = recv_json['data']
+        json_data = recv_json
 
         if json_type=='distance':
-            dist_json = self.noisy_generator.convert_to_sdk_distance(json_data)
+            dist_json = self.noisy_generator.convert_to_sdk_distance(json_data['data'])
             F,B,L,R = dist_json['result']
             self.info._set_sensor_data_info([F,R,B,L])
+            self._distance_syncer['F']=F
+            self._distance_syncer['R']=R
+            self._distance_syncer['B']=B
+            self._distance_syncer['L']=L
+            # print("sim senser: [raw]",json_data['data'] ,"[md]",[F,R,B,L])
 
         elif json_type == 'event':
             # 发生碰撞了。
@@ -61,6 +144,7 @@ class SimulateInfoHandler(SensorSourceHandler):
     
     # 发送 config 场景配置
     # 发送 position 小车位置更新
+
 
 
     def query_sensor_data_info(self, sensor_type):
@@ -127,10 +211,12 @@ class SimulateInfoHandler(SensorSourceHandler):
         self.sender_send_json(sync_json,need_reply=False)
 
     def query_position(self):
+        get_syncer = self._position_syncer
+
         position_json = {
-            'x': self._position_syncer['x'],
-            'y': self._position_syncer['y'],
-            'deg': self._position_syncer['deg'],
-            'rad': self._position_syncer['rad'],
+            'x': get_syncer['x'],
+            'y': get_syncer['y'],
+            'deg': get_syncer['deg'],
+            'rad': get_syncer['rad'],
         }
         return position_json

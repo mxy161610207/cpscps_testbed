@@ -2,9 +2,9 @@ import sys
 import matplotlib.pyplot as plt
 from random import randint,seed
 
-WIDTH  = 10
-HEIGHT = 10
-sys.setrecursionlimit(WIDTH * HEIGHT)
+WIDTH  = 4
+HEIGHT = 4
+# sys.setrecursionlimit(WIDTH * HEIGHT)
 
 seed()
 

@@ -143,7 +143,7 @@ class LocationList:
         else:
             
             if not (self._action is None):
-                print("[TODO] self.action not None! to late end")
+                # print("[TODO] self.action not None! to late end")
                 self._action = None
 
             self._action = recv_action

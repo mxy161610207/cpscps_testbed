@@ -8,7 +8,7 @@ from location.location_config import SystemState
 
 # Data from physical  
 class PhysicalInfoHandler(SensorSourceHandler):
-    def __init__(self,syncer, self_addr,server_addr,car_handler):
+    def __init__(self,syncer, self_addr,server_addr,car_handler,sdk_syncer):
         print("__init__ PhysicalInfoHandler start")
         super().__init__(self_addr,server_addr ,tag = 'P')
 
@@ -140,6 +140,7 @@ class PhysicalInfoHandler(SensorSourceHandler):
             self._init_angle  = d
 
         current_angle = -(d-self._init_angle)
+        self._car_handler.update_angle(current_angle)
         angle_json={
             'type':'ANGLE_TYPE',
             'info':{
@@ -167,6 +168,14 @@ class PhysicalInfoHandler(SensorSourceHandler):
             nxt_state=SystemState.ADJUST.name
         else:
             nxt_state=SystemState.NORMAL.name
+
+        if is_on:
+            self._car_handler._adjust_state.value = 1
+            print("---- start adjust ----")
+        else:
+            self._car_handler._adjust_state.value = 0
+            print("---- start normal ----")
+
         system_json={
             'type':'SYSTEM_TYPE',
             'info':{
@@ -215,11 +224,16 @@ class PhysicalInfoHandler(SensorSourceHandler):
 
     # 从syncer获取数据
     def query_position(self):
+        
+        # fake instead
+        # get_syncer = self._position_syncer
+        get_syncer = self._car_handler._sdk_syncer
+
         position_json = {
-            'x': self._position_syncer['x'],
-            'y': self._position_syncer['y'],
-            'deg': self._position_syncer['deg'],
-            'rad': self._position_syncer['rad'],
+            'x': get_syncer['x'],
+            'y': get_syncer['y'],
+            'deg': get_syncer['deg'],
+            'rad': get_syncer['rad'],
         }
         return position_json
 

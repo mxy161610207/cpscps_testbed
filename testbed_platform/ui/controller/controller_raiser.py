@@ -22,6 +22,8 @@ class ActionButton():
         self._panel = panel
         self._name = name
         self._button_code = button_code
+        self._can_disable = True
+        if (button_code == 'run'): self._can_disable = False
 
         self._x = x
         self._xsize = xsize
@@ -45,7 +47,8 @@ class ActionButton():
         return button
 
     def _set_disable(self):
-        self._button.config(state=tk.DISABLED)
+        if self._can_disable:
+            self._button.config(state=tk.DISABLED)
     
     def _set_enable(self):
         self._button.config(state=tk.ACTIVE)
@@ -114,6 +117,10 @@ class DJIControllerPanel(BaseControllerPanel):
         grid_row+=1
         tmp = ActionButton(self,"平台初始化","init",grid_row,grid_col,ysize = col_span)
         self._button_list.append(tmp)
+
+        grid_row+=1
+        tmp = ActionButton(self,"运行程序","run",grid_row,grid_col,ysize = col_span)
+        self._button_list.append(tmp)
         
         grid_row+=1
         status_size = 10
@@ -125,11 +132,12 @@ class DJIControllerPanel(BaseControllerPanel):
 
     @staticmethod
     def _action_json_create(ch):
-        if (ch=='init'):
+        if (ch=='init' or ch=='run'):
+            status_str = 'init_success' if ch=='init' else 'run'
             action_json={
                 'type':'SYSTEM_STATUS',
                 'info':{
-                    'status':'init_success',
+                    'status':status_str,
                 }
             }
         else:
@@ -281,6 +289,7 @@ class UsrControllerPanel(BaseControllerPanel):
                 else:
                     val = 0.0
             
+            # 前进到距离最近的位置。
             if (api_code == 'move' and k=='x' and val<0):
                 val = F_dis.value*0.001 - 0.2
 

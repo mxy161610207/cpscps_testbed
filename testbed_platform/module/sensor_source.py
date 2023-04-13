@@ -36,6 +36,7 @@ class SensorSourceSender:
 
     def start_recv_thread(self):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        print("[bind]",self._client_addr)
         self.server_socket.bind(self._client_addr)
 
         self.t_recv = threading.Thread(target=self.recv_msg)
@@ -45,7 +46,9 @@ class SensorSourceSender:
     # 每次要发消息时调用一下
     def send_msg(self,send_info):
         self.server_socket.sendto(send_info.encode('utf-8'),self._server_addr)
-        pass
+        # if self._manager._tag=='S':
+        #     print('send',send_info,self._server_addr)
+        # pass
         
     # 线程 - While True 一直接受消息
     def recv_msg(self):
@@ -97,6 +100,10 @@ class SensorSourceInfo:
         #     d = self._distance
         #     print("[source-{}] tof1:{}  tof2:{}  tof3:{}  tof4:{}".format(self._tag, \
         #         d[0], d[1], d[2], d[3]))
+        f_dir = open("D:\\GitHub\\cpscps_testbed\\unity_dir.txt","w")
+        dis_str = " ".join([str(_) for _ in self._distance])
+        f_dir.write(dis_str)
+        f_dir.close()
     
     def _set_angle_data_info(self, data_info):
         self._pitch_angle, self._yaw_angle, self._pitch_ground_angle, self._yaw_ground_angle = data_info[:]

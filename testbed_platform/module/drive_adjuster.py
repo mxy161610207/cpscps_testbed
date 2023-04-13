@@ -100,8 +100,8 @@ class DriveSpeedAdjuster():
             sdk_handler.SECURITY_MONITOR.wait_for_trigger()
 
             # 如果触发者是其他人
-            if not sdk_handler.SECURITY_MONITOR.is_accessable(self._run_proto):
-                raise PlatformException("SECURITY_MONITOR not accessable for proto {}".format(self._run_proto))
+            # if not sdk_handler.SECURITY_MONITOR.is_accessable(self._run_proto):
+            #     raise PlatformException("SECURITY_MONITOR not accessable for proto {}".format(self._run_proto))
 
             # 确实是被当前proto触发
             set_reason = sdk_handler.SECURITY_MONITOR.get_set_reason()

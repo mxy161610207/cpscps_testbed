@@ -16,7 +16,7 @@ import matplotlib.animation as animation
 def my_root_window_set():
     # name
     root_window = tk.Tk()
-    root_window.title('RoboMaster-EP contorller')
+    root_window.title('Sensor Display')
 
     # size
     # root_window.geometry('900x600')
@@ -35,12 +35,13 @@ def update_sensor_info(sensor_info,show_sp,F_dis,platform_message_resources):
         f_dir = open("D:\\GitHub\\cpscps_testbed\\unity_dir.txt","r")
         context = f_dir.read()
         f_dir.close()
-        dir = list(map(float,context.split()))
-        tag = ['F','B','L','R']
+        dir = list(map(int,context.split()))
+        # F,R,B,L
+        tag = ['F','R','B','L']
         for _ in range(len(tag)):
             try:
                 F_dis.value = int(dir[0])
-                t = "{}:{:.3f}".format(tag[_],dir[_])
+                t = "{}:{}".format(tag[_],dir[_])
             except Exception as e:
                 continue
             sensor_info[tag[_]].config(text=t)

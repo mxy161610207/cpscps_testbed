@@ -1,6 +1,7 @@
 from robomaster import robot
 from patch import all
 import time
+import math,random
 
 # platform
 from .platform_exception import PlatformException
@@ -11,19 +12,25 @@ from .security_monitor import SecurityMonitor
 from .drive_adjuster import DriveSpeedAdjuster
 
 class RoboMasterEPWrapper:
-    def __init__(self,
-        location_server_addr, phy_sender_addr, grd_syncer,
-        simluate_engine_addr, sim_sender_addr, sim_syncer):
+    def __init__(self,adjust_state,
+        location_server_addr, phy_sender_addr, grd_syncer,sdk_syncer,
+        simluate_engine_addr, sim_sender_addr, sim_syncer,sim_distance):
         print("__init__ RoboMasterEPWrapper start")
         self._status = 1
         self._rot_flip=-1
+        self._sdk_syncer = sdk_syncer
+
+        self._adjust_state = adjust_state
+        self._adjust_state.value = 0
         
         # connect and handle
         self._has_active_car=False
         self._robomaster_ep=None
 
-        self._phy_msg_sender = PhysicalInfoHandler(grd_syncer, phy_sender_addr, location_server_addr,self)
-        self._sim_msg_sender = SimulateInfoHandler(sim_syncer, sim_sender_addr, simluate_engine_addr,self)
+        self._phy_msg_sender = PhysicalInfoHandler(grd_syncer, phy_sender_addr, 
+                                                   location_server_addr,self,sdk_syncer)
+        self._sim_msg_sender = SimulateInfoHandler(sim_syncer, sim_sender_addr, 
+                                                   simluate_engine_addr,self,sim_distance)
 
         self._timer_manager = PlatformTimerManager(self)
         self._security_monitor = SecurityMonitor(self)
@@ -37,7 +44,22 @@ class RoboMasterEPWrapper:
 
     def close(self):
         if (self.has_active_car):
+            self._robomaster_ep.chassis.unsub_position()
             self._robomaster_ep.close()
+
+    def update_position(self,data):
+        x,y,z = data
+        self._sdk_syncer['x'] = int(x*1000) + 2700//2
+        self._sdk_syncer['y'] = int(-y*1000) + 2700//2
+
+        
+        self._sdk_syncer['x'] +=(random.random()-0.5)*4
+        self._sdk_syncer['y'] +=(random.random()-0.5)*4
+
+    def update_angle(self,angle):
+        self._sdk_syncer['deg'] = angle
+        self._sdk_syncer['deg']+=(random.random()-0.5)*6
+        self._sdk_syncer['rad'] = math.radians(angle)
 
     def get_initialized_robot(self):
         if (self.has_active_car):
@@ -48,6 +70,7 @@ class RoboMasterEPWrapper:
             self._robomaster_ep._platform_hander=self
             self._robomaster_ep.initialize(conn_type="sta")
             self._robomaster_ep.set_robot_mode(mode=robot.CHASSIS_LEAD)
+            self._robomaster_ep.chassis.sub_position(cs=1,freq=20,callback = self.update_position)
         except:
             raise PlatformException("[platform] connect error!")
         

@@ -82,9 +82,14 @@ class SecurityMonitor():
     def _get_set_reply(self):
         while(self._set_json['status']=='wait'):
             continue
-        reply_json=self._set_json
+
+        # fake instead
+        # reply_json=self._set_json
+        # position = reply_json['reply']['info']
+        position = self._car_handler.query_phy_position()
+
         self._set_json=None
-        return reply_json['reply']['info']
+        return position
 
     def get_set_position(self):
         if (self._set_reason=='ADJUST'):

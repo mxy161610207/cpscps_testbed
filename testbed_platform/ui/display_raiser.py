@@ -8,6 +8,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
 import threading
 import math,copy,json
+import random
 import os
 import time
 import matplotlib.animation as animation
@@ -109,7 +110,8 @@ class PositionCanvas:
     _grid_col_sz = _grid_map + 3
     _grid_padx = 10
     _title_font = ('Times', 20)
-    _map_size = 800
+    # _map_size = 800
+    _map_size = 400
     _map_padxy = _map_size//10
 
     def __init__(self, window, tag, name, x, y, syncer):
@@ -153,7 +155,9 @@ class PositionCanvas:
         is_latest=False,aw_len=50):
 
         ax = self._fig_ax
-        x,y,rad = position_info['x'],position_info['y'],position_info['rad']
+        x,y,deg = position_info['x'],position_info['y'],position_info['deg']
+        rad = math.radians(deg)
+        
 
         '''
         draw (scatter, arrow) to show a car's position
@@ -177,6 +181,7 @@ class PositionCanvas:
         # print("update")
         # 获取_syncer信息
         position_info = copy.deepcopy(self._syncer)
+        # print("tmp",position_info)
 
         # 初始化画布
         self._fig_ax.clear()
@@ -197,7 +202,8 @@ class PositionCanvas:
         # create_pos_fig(ax,position_info,is_latest=True,aw_len=50)
 
         # 添加文字描述 
-        text = position_info['info']+'\n'+position_info['status']
+        # text = position_info['info']+'\n'+position_info['status']
+        text = "none"
         self.text_show(text)
         
     # TODO: 之后为虚拟端画图标
@@ -410,7 +416,10 @@ def create_display(
         exit_func
         ):
     # 获取必要的资源
-    grd_location_syncer = platform_message_resources['grd_position']
+    
+    # fake instead
+    # grd_location_syncer = platform_message_resources['grd_position']
+    grd_location_syncer = platform_message_resources['fake_position']
     sim_location_syncer = platform_message_resources['sim_position'] 
 
     global sdk_platform_status,sdk_platform_message,display_platform_message
