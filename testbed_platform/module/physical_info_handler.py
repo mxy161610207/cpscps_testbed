@@ -175,9 +175,11 @@ class PhysicalInfoHandler(SensorSourceHandler):
 
         if is_on:
             self._car_handler._adjust_state.value = 1
+            self._car_handler._sim_msg_sender.send_status('adjust')
             print("---- start adjust ----")
         else:
             self._car_handler._adjust_state.value = 0
+            self._car_handler._sim_msg_sender.send_status('normal')
             print("---- start normal ----")
 
         system_json={

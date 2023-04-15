@@ -18,6 +18,10 @@ class SimulateInfoHandler(SensorSourceHandler):
         self._car_handler=car_handler
         self._sys_sub_modules = []
 
+        self._program_run = False
+        self._last_time = 0
+        self._interval = 0.5
+
         self.noisy_generator = NoisyGenerator()
 
         self.last_position = None
@@ -60,6 +64,19 @@ class SimulateInfoHandler(SensorSourceHandler):
         }
 
         return diff_json
+    
+    def append_phy_position_file(self,cur_position):
+        if (not self._program_run): return
+        cur_time = time.time()
+        if (cur_time-self._last_time>=self._interval):
+            self._last_time = cur_time
+
+            with open('filename.txt', 'a') as f:
+                line = "{} {} {} {}\n".format(
+                    self._car_handler._adjust_state.value == 0,
+                    cur_position['x'],cur_position['y'],cur_position['deg']
+                )
+                f.write(line)
 
     def send_position(self):
         # fake instead
@@ -69,9 +86,9 @@ class SimulateInfoHandler(SensorSourceHandler):
 
         while True:
             cur_position = self._car_handler._phy_msg_sender.query_position()
-            diff = {}
+            self.append_phy_position_file(cur_position)
+            
             has_diff=False
-
 
             diff_json = self.get_diff_json(self.last_position,cur_position)
 
@@ -104,6 +121,17 @@ class SimulateInfoHandler(SensorSourceHandler):
                 self.last_position = cur_position
                 
             time.sleep(0.05)
+
+    def send_status(self,status='init'):
+        status_json={
+            'type':'system',
+            'status':status
+        }
+        try:
+            self.sender_send_json(status_json)
+        except Exception as e:
+            pass
+
                 
     def handle_recv_json(self, recv_json):
         # print("[get sim_engine reply_json]",recv_json)
@@ -146,8 +174,6 @@ class SimulateInfoHandler(SensorSourceHandler):
     # 发送 config 场景配置
     # 发送 position 小车位置更新
 
-
-
     def query_sensor_data_info(self, sensor_type):
         position_json = self.query_position()
         query_json={
@@ -173,19 +199,19 @@ class SimulateInfoHandler(SensorSourceHandler):
         return data_info
 
 
-    def send_adjust_status(self,is_on=True):
-        if is_on:
-            nxt_state=SystemState.ADJUST.name
-        else:
-            nxt_state=SystemState.NORMAL.name
-        system_json={
-            'type':'SYSTEM_TYPE',
-            'info':{
-                'next_state':nxt_state
-            }
-        }
-        self.sender_send_json(system_json, need_reply=False)
-        return
+    # def send_adjust_status(self,is_on=True):
+    #     if is_on:
+    #         nxt_state=SystemState.ADJUST.name
+    #     else:
+    #         nxt_state=SystemState.NORMAL.name
+    #     system_json={
+    #         'type':'SYSTEM_TYPE',
+    #         'info':{
+    #             'next_state':nxt_state
+    #         }
+    #     }
+    #     self.sender_send_json(system_json, need_reply=False)
+    #     return
     
     def location_server_reset(self):
         system_json={

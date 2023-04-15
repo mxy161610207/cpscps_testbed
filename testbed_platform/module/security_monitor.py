@@ -128,7 +128,9 @@ class SecurityMonitor():
             sdk_handler.EP_ROBOT.chassis._dij_drive_speed(0, 0, 0)
             self._set_reason='ADJUST'
 
+    # 不管是move还是drive 都从这里开始姿态调整
     def security_monitor_adjust(self,api,obj,is_manual=False):
+        sdk_handler.PHY_SENDER.send_adjust_status(is_on=True)
         sdk_handler.CAR_HANDLER.flush_undefined_behavior()
         print("adjust for",api)
         if api=='move':
@@ -137,3 +139,4 @@ class SecurityMonitor():
             pass
         
         sdk_handler.CAR_HANDLER.adjust(is_manual)
+        sdk_handler.PHY_SENDER.send_adjust_status(is_on=False)

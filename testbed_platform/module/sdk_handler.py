@@ -6,6 +6,8 @@ from robomaster import robot
 from .robo_wrapper import RoboMasterEPWrapper
 from .platform_exception import PlatformException
 
+from importlib import reload
+
 def create_car_handler(adjust_state,
         location_server_addr,physical_sender_addr,grd_syncer,sdk_syncer,
         simulate_engine_addr,simulate_sender_addr,sim_syncer,sim_distance):
@@ -61,32 +63,10 @@ def closer(
     sdk_platform_message.put(json.dumps(close_json))
     return
 
-def run(ep_robot,sensor):
-    ep_chassis = ep_robot.chassis
-
-    ep_chassis.drive_speed(0.3,0,0)
-    while True:
-        dis_F = sensor['F']
-        if (dis_F<300):
-            ep_chassis.move(-1,0,0).wait_for_completed()
-            break
-        time.sleep(0.1)
-
-    # while True:
-    #     dis_F = sensor['F']
-    #     dis_R = sensor['R']
-    #     print("**********", dis_F,dis_R)
-    #     if dis_R<600:
-    #         if (dis_F<300):
-    #             # ep_chassis.drive_speed(0,0,0)
-    #             ep_chassis.move(0,0,0,0.5).wait_for_completed()
-    #             ep_chassis.move(0,0,93,0.5).wait_for_completed()
-    #         else:
-    #             ep_chassis.move((dis_F-300)*0.001,0,0,0.5).wait_for_completed()
-    #     else:
-    #         ep_chassis.move(0,0,-90,0.5).wait_for_completed()
-    #         ep_chassis.move(0.6,0,0,0.5).wait_for_completed()
-    #     time.sleep(1)
+def load_user_program(ep_robot,sensor):
+    from .user_program import user_program
+    reload(user_program)
+    user_program.run(ep_robot,sensor)
 
 def raiser(
     proc_name, 
@@ -189,12 +169,17 @@ def raiser(
                 
                 # action = {'x':0.0,'y':0.0,'z':0.0}
                 # CAR_HANDLER.do_drive_api(action,timeout=5)
-                run(EP_ROBOT,sim_distance)
+                
+                SIM_SENDER.send_status('init')
+                SIM_SENDER._program_run = True
+                load_user_program(EP_ROBOT,sim_distance)
                 info = {
                     'msg':"run_success"
                 }
                 reply_json['info']=info
                 controller_message.put(json.dumps(reply_json))
+                SIM_SENDER._program_run = False
+                SIM_SENDER.send_status('end')
                 pass
 
         elif action_type == 'SENSOR':

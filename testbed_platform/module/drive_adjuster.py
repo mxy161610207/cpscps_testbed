@@ -109,7 +109,6 @@ class DriveSpeedAdjuster():
             print("[drive_adjuster] set_reason =",set_reason)
 
             if (set_reason == "ADJUST"):
-                sdk_handler.PHY_SENDER.send_adjust_status(is_on=True)
                 self.drive_adjust()
                 print("drive proto send again")
                 self._recover_proto()
