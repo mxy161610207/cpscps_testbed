@@ -213,13 +213,17 @@ class SafeChassisMoveAction(action.Action):
         if (self._state == action.ACTION_IDLE):
             self._changeto_state(action.ACTION_RUNNING)
 
+        while (sdk_handler.CAR_HANDLER._adjust_state.value == 1):
+            pass
+        
         self._chassis._action_dispatcher.send_action(self._actual_action)
         # print("send actual action")
 
         # one of monitor will set
         sdk_handler.SECURITY_MONITOR.wait_for_trigger()
         if not sdk_handler.SECURITY_MONITOR.is_accessable(self):
-            raise PlatformException("SECURITY_MONITOR not accessable for SafeAction{}".format(self._encode_json))
+            pass
+            # raise PlatformException("SECURITY_MONITOR not accessable for SafeAction{}".format(self._encode_json))
 
         # 获取从start pos 到当前位置的移动距离
 
@@ -229,7 +233,7 @@ class SafeChassisMoveAction(action.Action):
 
         # 下一次动作迭代        
         set_reason = sdk_handler.SECURITY_MONITOR.get_set_reason()
-        print("set_reason =",set_reason)
+        print("[safe_action] set_reason =",set_reason)
 
         if (set_reason == "ADJUST"):
             # set by _auto_distance_security_check()

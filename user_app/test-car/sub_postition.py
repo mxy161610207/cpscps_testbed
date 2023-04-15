@@ -7,10 +7,10 @@ def do_action(ep_chassis,action, move_dis=0.5,rot_deg=90,mute=False):
     xy_speed=0.6
     z_speed=60
     if (action == 'W'):
-        # ep_chassis.move(move_dis,0,0,xy_speed,z_speed).wait_for_completed()
-        ep_chassis.drive_speed(x=0.2)
-        time.sleep(2.25)
-        ep_chassis.move(0,0,0).wait_for_completed()
+        ep_chassis.move(move_dis,0,0,xy_speed,z_speed).wait_for_completed()
+        # ep_chassis.drive_speed(x=0.2)
+        # time.sleep(2.25)
+        # ep_chassis.move(0,0,0).wait_for_completed()
 
     elif (action == 'S'):
         ep_chassis.move(-move_dis,0,0,xy_speed,z_speed).wait_for_completed()
@@ -53,7 +53,7 @@ def sub_position_handler(position_info):
 
     position['x']=x
     position['y']=-y
-    print(position,f=fp)
+    print(position)
 
 def sub_data_handler(angle_info):
     pitch_angle, yaw_angle, pitch_ground_angle, yaw_ground_angle = angle_info
@@ -95,20 +95,28 @@ if __name__ == '__main__':
     ep_gimbal = ep_robot.gimbal
 
     # 订阅底盘位置信息
-    ep_chassis.sub_position(freq=50, callback=sub_position_handler)
+    ep_chassis.sub_position(cs=0,freq=50, callback=sub_position_handler)
     ep_sensor.sub_distance(freq=50, callback=sub_sensor_handler)
     ep_gimbal.sub_angle(freq=50, callback=sub_data_handler)
 
     time.sleep(1)
-    d=0.45
+    d=1
 
-    while(True):
-        s = input("action>")
-        if s=='Q' or s=='q':
-            break
+    
+    # do_action(ep_chassis,'S',move_dis=1)
+    # ep_chassis.drive_wheels(0,0,0,0)
+    # input()
+    do_action(ep_chassis,'L',move_dis=1)
+    ep_chassis.drive_wheels(0,0,0,0)
+    input()
+
+    # while(True):
+    #     s = input("action>")
+    #     if s=='Q' or s=='q':
+    #         break
         
-        for ch in s:
-            do_action(ep_chassis,ch,move_dis=d)
+    #     for ch in s:
+    #         do_action(ep_chassis,ch,move_dis=d)
     
     time.sleep(1)
 

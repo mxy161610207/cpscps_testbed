@@ -48,7 +48,8 @@ class PhysicalInfoHandler(SensorSourceHandler):
         if (need_reply):
             send_json['status']='wait'
             if (send_json['type']!='SYNC'):
-                print("[query]", send_json)
+                # print("[query]", send_json)
+                pass
         pass
 
     # Phycial端 - 小车收到回复数据包的处理
@@ -137,7 +138,10 @@ class PhysicalInfoHandler(SensorSourceHandler):
 
         # 初始0度 左转 z=90 angle变-90 所以取反 
         if (self._init_angle==None):
-            self._init_angle  = d
+            if (abs(d)<5):
+                self._init_angle = d 
+            else:
+                self._init_angle = 0
 
         current_angle = -(d-self._init_angle)
         self._car_handler.update_angle(current_angle)

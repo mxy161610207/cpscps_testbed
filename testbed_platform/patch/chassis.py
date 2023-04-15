@@ -20,7 +20,9 @@ class Chassis(module.Module):
 def _md_auto_stop_timer(self, api="drive_speed"):
     if api == "drive_speed":
         logger.info("Chassis: drive_speed timeout, auto stop!")
-        self._dij_drive_speed(0, 0, 0)
+        # drive_speed issue：缓慢顺时针旋转。所以这里用drive_wheels
+        # https://github.com/dji-sdk/RoboMaster-SDK/issues/47
+        self.drive_wheels(0, 0, 0, 0)
     elif api == "drive_wheels":
         logger.info("Chassis: drive_wheels timeout, auto stop!")
         self.drive_wheels(0, 0, 0)

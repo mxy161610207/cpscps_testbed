@@ -91,10 +91,11 @@ class SimulateInfoHandler(SensorSourceHandler):
             try:
                 if (self._car_handler._adjust_state.value == 0):
                     # raise Exception("None")
-                    print("normal")
+                    # print("normal")
                     self.sender_send_json(diff_json)
                 else:
-                    print("drop",diff_json)
+                    # print("drop",diff_json)
+                    pass
             except Exception as e:
                 # print(e)
                 # print(self.sender._server_addr)

@@ -290,8 +290,8 @@ class UsrControllerPanel(BaseControllerPanel):
                     val = 0.0
             
             # 前进到距离最近的位置。
-            if (api_code == 'move' and k=='x' and val<0):
-                val = F_dis.value*0.001 - 0.2
+            # if (api_code == 'move' and k=='x' and val<0):
+            #     val = F_dis.value*0.001 - 0.2
 
             if (api_code == 'move' and k=='x' and val>100):
                 val = 0.5
@@ -457,6 +457,9 @@ def flush_controller_status(controller_status,controller_message):
                 update_controller_status(controller_status, 1)
                 controller_panels['dji']._disable_all_button()
                 controller_panels['usr']._enable_all_button()
+            elif(reply_info['msg']=='run_success'):
+                update_controller_status(controller_status, 1)
+
         elif reply_type=='SENSOR':
             update_controller_status(controller_status, 1)
             sensor_type = reply_info['sensor_type']
