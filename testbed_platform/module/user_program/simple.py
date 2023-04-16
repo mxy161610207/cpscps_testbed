@@ -3,7 +3,7 @@ def get_neighour(sensor,edge_len):
     status = [0]*4
     for i in range(4):
         dis = sensor[dir[i]]
-        if dis>edge_len*800:
+        if dis>edge_len*1000:
             status[i]=1
 
     return status
@@ -23,14 +23,14 @@ def run(ep_robot,sensor):
         action = "FLFLLF"
         for s in action:
             status = get_neighour(sensor,edge_len)
-            print(sensor,file=f)
-            print(status,file=f)
+            print(status,fp=f)
+
             d=0
             for _ in range(4):
                 if (dir[_]==s):
                     d=_
                     break
 
-            print(dx[d],dy[d],file=f)
+            print(dx[d],dy[d],fp=f)
 
-            ep_chassis.move(dx[d]*edge_len,dy[d]*edge_len,0,0.6,0).wait_for_completed()
+            ep_chassis.move(dx[d]*edge_len,dy[d]*edge_len,0,0.3,0).wait_for_completed()

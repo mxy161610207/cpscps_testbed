@@ -30,7 +30,7 @@ class SafeChassisMoveAction(action.Action):
     _checker_lock = threading.Lock()
     _on_state_changed = None
 
-    def __init__(self, chassis:Chassis , x=0, y=0, z=0, spd_xy=0, spd_z=0, **kw):
+    def __init__(self, chassis:Chassis , x=0.0, y=0.0, z=0.0, spd_xy=0.0, spd_z=0.0, **kw):
         # self._action_id = -1
         self.timer = None
         self._percent = 0
@@ -43,12 +43,12 @@ class SafeChassisMoveAction(action.Action):
         self._z = z
         self._zero_element = []
         for _ in (x,y,z):
-            self._zero_element.append(0 if _==0 else 1)
+            self._zero_element.append(0 if math.fabs(_ - 0)<1e-4 else 1)
 
 
-        self._cur_x = 0
-        self._cur_y = 0
-        self._cur_z = 0
+        self._cur_x = 0.0
+        self._cur_y = 0.0
+        self._cur_z = 0.0
 
         self._spd_xy = spd_xy
         self._spd_z = spd_z
@@ -68,7 +68,23 @@ class SafeChassisMoveAction(action.Action):
 
     def _generate_action(self):
         left = self._left()[:]
+        left = self._fix_for_after_adjust(left)
+        print("+++ _generate_action {}".format(left))
+
         return ChassisMoveAction(left[0],left[1],left[2],self._spd_xy,self._spd_z)
+
+    def _fix_for_after_adjust(self,left):
+        if self._state == action.ACTION_IDLE:
+            return left
+        
+        for i in range(3):
+            if (self._zero_element[i]==0):
+                continue
+
+            sgn = -1 if left[i]<0 else 1
+            left[i] += sgn * (0.1)
+
+        return left
 
     def _goal(self):
         return [self._x,self._y,self._z]
@@ -169,6 +185,7 @@ class SafeChassisMoveAction(action.Action):
         print("+++ action completed")
 
         if (not sdk_handler.SECURITY_MONITOR.isSet()):
+            print("why timeout?")
             sdk_handler.SECURITY_MONITOR.event_set_by('END')
 
         if (not exec_result):

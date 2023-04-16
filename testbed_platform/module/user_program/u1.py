@@ -5,14 +5,18 @@ def get_neighour(sensor,edge_len):
     status = [0]*4
     for i in range(4):
         dis = sensor[dir[i]]
-        if dis>edge_len:
+        if dis>edge_len*1000:
             status[i]=1
+
     return status
 
 # 深度优先搜索函数
 def dfs(x, y, maze, sensor , edge_len, N , ep_chassis):
     # 标记当前格子已访问
     maze[x][y] = 1
+    print(maze)
+    print(maze)
+    print(maze)
 
     if (x==N-1 and y==N-1):
         return True
@@ -37,13 +41,19 @@ def dfs(x, y, maze, sensor , edge_len, N , ep_chassis):
 
         # 判断邻格是否已访问，若已访问，放弃
         if maze[nx][ny] == 1:
+            print("visited {} {}".format(nx,ny))
             continue
         
         # 移动车
-        ep_chassis.move(dx*edge_len,dy*edge_len,0,0.3,0).wait_for_completed()
+        ep_chassis.move(dx[i]*edge_len,dy[i]*edge_len,0,0.3,0).wait_for_completed()
+        # input("Enter")
+        # 继续探索
+        print("----------------at [{},{}] FBLR = {}".format(x,y,status))
+        print("---------------- {} {} to {} {}".format(x,y,nx,ny))    
         can = dfs(nx,ny,maze,sensor,edge_len,N,ep_chassis)
         if (not can):
-            ep_chassis.move(dx*edge_len,dy*edge_len,0,0.3,0).wait_for_completed()
+            # 死路，回退
+            ep_chassis.move(-dx[i]*edge_len,-dy[i]*edge_len,0,0.3,0).wait_for_completed()
         else:
             return True
     

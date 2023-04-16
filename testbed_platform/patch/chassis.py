@@ -46,7 +46,7 @@ def md_drive_speed(self, x=0.0, y=0.0, z=0.0, timeout=None):
     return sdk_handler.DRIVE_SPEED_ADJUSTER.register_proto(self, proto,timeout)
 
 
-def md_move(self, x=0, y=0, z=0, xy_speed=0.5, z_speed=30):
+def md_move(self, x=0.0, y=0.0, z=0.0, xy_speed=0.5, z_speed=30):
     """ 修改后的move
     """
     action = SafeChassisMoveAction(self, x, y, z, xy_speed, z_speed)

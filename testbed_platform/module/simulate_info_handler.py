@@ -20,7 +20,7 @@ class SimulateInfoHandler(SensorSourceHandler):
 
         self._program_run = False
         self._last_time = 0
-        self._interval = 0.5
+        self._interval = 0.2
 
         self.noisy_generator = NoisyGenerator()
 
@@ -65,13 +65,17 @@ class SimulateInfoHandler(SensorSourceHandler):
 
         return diff_json
     
+    def init_phy_position_file(self):
+        with open('phy_pos_replay.txt', 'w') as f:
+            pass
+    
     def append_phy_position_file(self,cur_position):
         if (not self._program_run): return
         cur_time = time.time()
         if (cur_time-self._last_time>=self._interval):
             self._last_time = cur_time
 
-            with open('filename.txt', 'a') as f:
+            with open('phy_pos_replay.txt', 'a') as f:
                 line = "{} {} {} {}\n".format(
                     self._car_handler._adjust_state.value == 0,
                     cur_position['x'],cur_position['y'],cur_position['deg']

@@ -159,6 +159,7 @@ class RoboMasterEPWrapper:
 
             # step2 
             self.do_action('B',self._robomaster_ep)
+            time.sleep(0.5)
 
         # stop adjust status
 

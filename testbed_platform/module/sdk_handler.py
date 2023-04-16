@@ -170,9 +170,12 @@ def raiser(
                 # action = {'x':0.0,'y':0.0,'z':0.0}
                 # CAR_HANDLER.do_drive_api(action,timeout=5)
                 
+                SIM_SENDER.init_phy_position_file()
                 SIM_SENDER.send_status('init')
                 SIM_SENDER._program_run = True
                 load_user_program(EP_ROBOT,sim_distance)
+
+                for _ in range(10): print("run_success")
                 info = {
                     'msg':"run_success"
                 }
