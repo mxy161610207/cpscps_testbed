@@ -68,6 +68,7 @@ class MyEqSet:
         for eq in self.eqs:
             assert(isinstance(eq,MyEq))
             print(eq.to_string(),file=CALC_LOG)
+            # print(eq.to_string())
         self.check_eqs(self.eqs)
         print(file=CALC_LOG)
 

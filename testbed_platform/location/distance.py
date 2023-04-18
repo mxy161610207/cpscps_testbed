@@ -3,7 +3,7 @@ from . import position_config as pc
 class Distance:
     _distance = []
     _is_math_distance = True
-
+    # md_dist = [131,99,119,119]
     def __init__(self,_d,handle = 'modify'):
         self._distance = _d[:]  # F R B L
         if (handle=='modify'):

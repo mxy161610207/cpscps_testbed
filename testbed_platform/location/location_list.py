@@ -302,7 +302,7 @@ class LocationList:
 
         _TODO_four = 0
 
-        self._mute = True
+        self._mute = False
 
         # for irs in cand_irs:
         #     msg.append("> maybe {}".format(irs))

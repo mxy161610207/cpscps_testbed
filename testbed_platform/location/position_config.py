@@ -30,7 +30,7 @@ walls = [
 
 # nosiy range - 即使车辆不移动，测距nosiy也会导致车辆定位在这个范围漂移
 
-xy_nosiy_range = 15
+xy_nosiy_range = 20
 xy_nosiy_step = 5
 deg_nosiy_range = 10
 deg_nosiy_step = 2
