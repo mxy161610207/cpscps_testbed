@@ -124,21 +124,36 @@ syncer = {
     'rad':math.radians(0)
 }
 
-E = 2720
-x,y,a =  2088.5835404216114,688.2698481247011,-40.198228277783095
+
+# True 2174.972118229169 1766.1383389725195 51.49781089490035
+# True 2171.798091283207 1769.0778981953413 51.234350089705536
+# True 2189.2008905854314 1788.3591192298486 52.441748791616114 -----
+# True 2218.047583779054 1820.0102542231562 50.555865444070555
+# True 2246.1005226806365 1861.0300038254095 54.135683446763316 
+# True 2278.8229857269775 1903.1129795741658 49.49676692855967  
+# True 2309.5167548312625 1940.091675968659 53.97584790185583
+# True 2342.8067180252506 1984.8855965866753 49.226770922151985
+# True 2380.806129591816 2029.0356720867628 53.754423150992615
+
+x,y,a =  map(float,"2189.2008905854314 1788.3591192298486 52.44174879161611".split(" "))
+nx,ny,na = map(float,"2218.047583779054 1820.0102542231562 50.555865444070555".split(" "))
+
+print(x-2720//2,y-2720//2)
 car_pos = Position({'x':x,'y':y,'rad':math.radians(a)},
             is_irs_center=True)
 cur_pos_cand = PositionCands(car_pos)
 print(car_pos._ir_inter_walls)
 irs = cur_pos_cand.expand_next_conn_status()
 # print(irs)
+# modified distance FRBL = [909, 1566, 665, 2416]
 
 
 lst = LocationList(syncer=syncer)
 lst.append(cur_pos_cand)
 print(lst.current_postion.pos_str)
 
-sensor_data = [802, 879, 2707, 800]
+# 前后左右的顺序
+sensor_data = [659,2254,1299,532]
 msg = []
 
 lst.advance_once(sensor_data,msg)
@@ -150,6 +165,7 @@ print(lst.current_postion.pos_str)
 
 fig, ax = plt.subplots()
 
+print("ideal = ",nx,ny,na)
 
 
 # x,y,a = 2266.5835404216114,688.2698481247011,-42.198228277783095

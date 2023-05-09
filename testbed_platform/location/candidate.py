@@ -229,7 +229,7 @@ class PositionCands:
 
             msg.append("[{}] score: {:.3f} + {:.3f} = {:.3f} / tor = {:.3f}".format(
                 i,dist,ddeg,cur_diff,tor_diff))
-            # print("[{}] score: {:.3f} + {:.3f} = {:.3f} / tor = {:.3f}".format(i,dist,ddeg,cur_diff,tor_diff),file=CALC_LOG)
+            print("[{}] score: {:.3f} + {:.3f} = {:.3f} / tor = {:.3f}".format(i,dist,ddeg,cur_diff,tor_diff),file=CALC_LOG)
 
             if (tmp_cho==-1 
             or(tor_diff < tmp_tor_diff)

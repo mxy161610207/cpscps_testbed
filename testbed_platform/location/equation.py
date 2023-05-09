@@ -502,7 +502,8 @@ class MyEqSet:
         a,b,c = mat[0],mat[1],mat[2]
         det = b**2 - 4.0*a*c
         if det<0:
-            return False,"No solution - det < 0"
+            print("E={}".format(pc.E),file=CALC_LOG)
+            return False,"No solution - det < 0, {} {} {} {}".format(det,a,b,c)
         
         sqrt_det = math.sqrt(det)
         x1 = (b+sqrt_det)/(-2.0*a)

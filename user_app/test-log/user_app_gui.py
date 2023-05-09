@@ -274,15 +274,15 @@ class FileTransferGUI:
         # 创建文本框
         label = tk.Label(master, text="虚拟场景日志")
         label.grid(row=0, column=9,columnspan= 2,pady=10)
-        text = tk.Text(root,width=50, height=15)
-        text.grid(row=1, column=9, rowspan=2, columnspan=2, padx=10, pady=20)
+        text = tk.Text(root,width=50, height=12)
+        text.grid(row=1, column=9, rowspan=1, columnspan=2, padx=10, pady=20)
         self.text_sim_module = TextUpdateModule(6667,text)
 
         # 创建文本框
         label = tk.Label(master, text="物理场景日志")
-        label.grid(row=3, column=9,columnspan= 2,pady=10)
-        text = tk.Text(root,width=50, height=15)
-        text.grid(row=4, column=9, rowspan=2, columnspan=2, padx=10, pady=20)
+        label.grid(row=2, column=9,columnspan= 2,pady=10)
+        text = tk.Text(root,width=50, height=10)
+        text.grid(row=3, column=9, rowspan=3, columnspan=2, padx=10, pady=20)
         self.text_grd_module = TextUpdateModule(6668,text)
 
 if __name__=="__main__":

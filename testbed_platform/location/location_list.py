@@ -293,6 +293,7 @@ class LocationList:
         raw_dis = [F,R,B,L]
         md_dis = Distance(raw_dis)._distance
         msg.append("modified distance FRBL = {}".format(md_dis))
+        print("modified distance FRBL = {}".format(md_dis),file=CALC_LOG)
         msg.append("> ir_cnt = {}".format(len(cand_irs)))
         
         # 列方程求解，求解结果
@@ -319,6 +320,7 @@ class LocationList:
 
         for irs in cand_irs:
             msg.append("> maybe {}".format(irs))
+            print("> maybe {}".format(irs),file=CALC_LOG)
             # msg.append(">> irs = {}".format(irs))
 
             cur_eqs = MyEqSet(irs,md_dis)
