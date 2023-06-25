@@ -11,6 +11,7 @@ from ui.controller import controller_raiser
 from ui.sensor import sensor_display
 
 from module import sdk_handler
+from module import driver_wrapper
 
 def init_position_syncer(syncer):
     syncer['x'] = 0
@@ -20,6 +21,8 @@ def init_position_syncer(syncer):
 
 
 if __name__ == '__main__': 
+    is_driver_mode = True
+
     # 系统多进程资源
     platform_manager = Manager()    
 
@@ -31,6 +34,7 @@ if __name__ == '__main__':
         'sdk' : ('127.0.0.1', 41011),
         'location': ('127.0.0.1', 41234),
         'sim_engine': ('127.0.0.1', 44321),
+        'driver_server': ('127.0.0.1', 18080),
     }
     
     platform_status_resources['global'] = Value('i',0)
@@ -55,13 +59,12 @@ if __name__ == '__main__':
     platform_status_resources['display'] = Value('i',0)
     platform_message_resources['display'] = Queue(-1)
 
-    # --- 用户操控工具 ---
+    # --- 操控工具 --- 同样用于用户操作/驱动扩展
     platform_status_resources['control'] = Value('i',0)
     platform_message_resources['control'] = Queue(-1)
 
     platform_status_resources['F_dis'] = Value('i',-1)
     platform_status_resources['sim_distance'] = platform_manager.dict()
-
     
     platform_status_resources['adjust'] = Value('i',0)
 
@@ -105,14 +108,24 @@ if __name__ == '__main__':
     )
 
     # 4) 用户操作进程
-    process_name = 'raise_controller'
-    proc_controller = Process(
-        target=controller_raiser.raiser,
-        args=(  process_name,
-                platform_status_resources,
-                platform_message_resources,
-                platform_socket_address)
-    )
+    if (not is_driver_mode):
+        process_name = 'raise_controller'
+        proc_controller = Process(
+            target=controller_raiser.raiser,
+            args=(  process_name,
+                    platform_status_resources,
+                    platform_message_resources,
+                    platform_socket_address)
+        )
+    else:
+        process_name = 'raise_driver'
+        proc_controller = Process(
+            target=driver_wrapper.raiser,
+            args=(  process_name,
+                    platform_status_resources,
+                    platform_message_resources,
+                    platform_socket_address)
+        )
 
     # 5) 测距显示进程 - 暂时弃用，可开启用于调试
     # process_name = 'raise_sensor'
@@ -149,7 +162,7 @@ if __name__ == '__main__':
     display_status = platform_status_resources['display']
     proc_display.start()
 
-    # 4) 用户操作进程
+    # 4) 操作进程
     proc_controller.start()
 
     global_status = platform_status_resources['global']

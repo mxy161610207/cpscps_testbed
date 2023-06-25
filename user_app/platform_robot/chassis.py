@@ -20,10 +20,14 @@ class ChassisMoveAction():
 
     def wait_for_completed(self, timeout=None):
         # 该动作运行，注册
-        self._robot._sensor_adapter.register_action(self)
-
-        cmd = f'SAFE: chassis move x {self._x} y {self._y} z{self._z} vxy {self._spd_xy} vz{self._spd_z} timeout {-1 if timeout is None else timeout};'
+        cmd = f'SAFE: chassis move x {self._x} y {self._y} z {self._z} vxy {self._spd_xy} vz {self._spd_z} timeout {-1 if timeout is None else timeout} uuid {self._action_id};'
         self._robot.helper.put_msg(cmd)
+
+        # 等待注册成功
+        while True:
+            if self._robot.is_register_action: 
+                print(f'mxy Log: register_action id = {self._watch_action}')
+                break
 
         # 等待驱动完成
         self._event.wait()
@@ -34,14 +38,14 @@ class Chassis:
         self._robot = robot
 
     def drive_speed(self, x=0.0, y=0.0, z=0.0, timeout=None):
-        if (not self._chassis_current_action_id):
-            raise Exception(f'mxy: reject drive_speed, action id = {self._chassis_current_action_id} is running')
+        if (not self._chassis_action_empty):
+            raise Exception(f'mxy: reject drive_speed x {x} y {y} z {z}')
         cmd = f'SAFE: chassis speed x {x} y {y} z {z} timeout {-1 if timeout is None else timeout};'
         self._robot.helper.put_msg(cmd)
 
     def move(self, x=0, y=0, z=0, xy_speed=0.5, z_speed=30):
-        if (not self._chassis_current_action_id):
-            raise Exception(f'mxy: reject move, action id = {self._chassis_current_action_id} is running')
+        if (not self._chassis_action_empty):
+            raise Exception(f'mxy: reject move x {x} y {y} z {z} vxy {xy_speed} vz {z_speed} ')
         
         action = ChassisMoveAction(x, y, z, xy_speed, z_speed)
         return action
@@ -49,8 +53,4 @@ class Chassis:
 
     @property
     def _chassis_action_empty(self):
-        return self._robot._sensor_adapter._watch_action == -1
-
-    @property
-    def _chassis_current_action_id(self):
-        return self._robot._sensor_adapter._watch_action
+        return self._robot._sensor_adapter._chassis_status == 1

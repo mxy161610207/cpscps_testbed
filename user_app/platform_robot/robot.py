@@ -24,10 +24,6 @@ class Robot:
         return True
 
     @property
-    def gimbal(self):
-        return self._gimbal
-
-    @property
     def chassis(self):
         return self._chassis
 
@@ -36,5 +32,5 @@ class Robot:
         return self._chassis
     
     @property
-    def sensor(self):
-        return self._sensor_adapter
+    def is_register_action(self,action_id):
+        return self._sensor_adapter._watch_action == action_id

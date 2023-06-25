@@ -512,8 +512,6 @@ def raiser(
     controller_status = platform_status_resources['control']
     controller_message = platform_message_resources['control']
 
-
-    
     # 当controller_status变化时 所有需要更新的模块
     global status_update_register
     status_update_register = []
