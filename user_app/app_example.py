@@ -1,4 +1,5 @@
-from . 
+from platform_robot import robot
+# from robomaster import robot
 import time
 
 def get_neighour(sensor,edge_len):
@@ -6,7 +7,7 @@ def get_neighour(sensor,edge_len):
     status = [0]*4
     for i in range(4):
         dis = sensor[dir[i]]
-        if dis>edge_len*800:
+        if dis>edge_len*0.8*1000:
             status[i]=1
 
     return status
@@ -18,7 +19,7 @@ def dfs(px,py,vis,act,
     if (px==0 and py==0):
         finished=True
         return
-    
+  
     vis.append((px,py))
     
     # 四个方向哪些可行
@@ -77,4 +78,23 @@ def run(ep_robot,sensor):
         print(vis,file=f)
         print(act,file=f)
 
-            
+
+# ------- 下面是将论文中的usr_register 函数转为一个大疆程序的辅助代码 --------
+
+def sub_data_handler(distance,distance_logger):
+    distance_logger['F'] = distance[0]
+    distance_logger['R'] = distance[1]
+    distance_logger['B'] = distance[2]
+    distance_logger['L'] = distance[3]
+
+if __name__ == '__main__':
+    ep_robot = robot.Robot()
+    ep_robot.initialize(conn_type='sta')
+
+    distance_logger = {'F':0, 'B':0, 'L':0, 'R':0 }
+    ep_sensor = ep_robot.sensor
+    ep_sensor.sub_distance(5, sub_data_handler, distance_logger)
+
+    run(ep_robot,distance_logger)
+
+    ep_sensor.unsub_distance()

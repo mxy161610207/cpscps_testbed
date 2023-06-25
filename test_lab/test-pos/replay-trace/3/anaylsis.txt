@@ -1,0 +1,3 @@
+total iteration = 179
+adjust iteration = 75
+adjust percent = 41.90% 

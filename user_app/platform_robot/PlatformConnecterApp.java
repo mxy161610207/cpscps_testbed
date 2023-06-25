@@ -16,7 +16,7 @@ import java.net.Socket;
 import java.util.Map;
 import java.util.Objects;
 
-public class RollbackApp extends AbstractApp {
+public class PlatformConnecterApp extends AbstractApp {
     @Override
     public void getMsg(String sensorName, SensorData value) {
         logger.info(String.format("[%s]: getMsg(channel, msg) -> %s, %s", appName, sensorName, value));
@@ -24,7 +24,7 @@ public class RollbackApp extends AbstractApp {
 
     @Override
     public void configApp() {
-        this.appName = "RollbackApp";
+        this.appName = "PlatformConnecterApp";
         this.appDescription = "FooBar";
     }
 
@@ -32,7 +32,7 @@ public class RollbackApp extends AbstractApp {
     private static final String actuatorName = "RoboMasterEP";
 
     public static void main(String[] args) throws InterruptedException, IOException, ClassNotFoundException {
-        RollbackApp app = new RollbackApp();
+        PlatformConnecterApp app = new PlatformConnecterApp();
         AppRemoteConnector connector = AppRemoteConnector.getInstance();
         connector.connectPlatform("127.0.0.1", 9090);
         connector.registerApp(app);
@@ -40,7 +40,7 @@ public class RollbackApp extends AbstractApp {
 
         Map<String, SensorInfo> supportedSensors = connector.getSupportedSensors();
         if (supportedSensors.containsKey(sensorName) && supportedSensors.get(sensorName).state == State.ON) {
-            connector.registerSensor(sensorName, SensorMode.PASSIVE, -1);
+            connector.registerSensor(sensorName, SensorMode.PASSIVE, 10);
         } else {
             throw new RuntimeException();
         }
@@ -56,11 +56,7 @@ public class RollbackApp extends AbstractApp {
         PythonCommunicationHelper helper = new PythonCommunicationHelper();
 
         while (true) {
-            String cmd = helper.getMsg();
-            if ("IN: sensor_readings?;".equals(cmd)) {
-                String sensorReadings = connector.getSensorData(sensorName).toString();
-                helper.putMsg(sensorReadings);
-            } else if (cmd != null && (cmd.startsWith("IN: chassis") || cmd.startsWith("IN: gimbal") || cmd.startsWith("IN robot mode"))) {
+            if (cmd != null && (cmd.startsWith("SAFE: "))) {
                 connector.setActorCmd(actuatorName, cmd);
             } else if ("EXIT".equals(cmd)) {
                 break;
@@ -77,12 +73,13 @@ public class RollbackApp extends AbstractApp {
 
 
 class PythonCommunicationHelper {
-    private static final int port = 8080;
+    private static final int port = 18080;
     private ObjectInputStream ois;
     private ObjectOutputStream oos;
+    private ServerSocket server;
 
     public void waitForConnect() throws IOException {
-        ServerSocket server = new ServerSocket(port);
+        server = new ServerSocket(port);
         Socket socket = server.accept();
         ois = new ObjectInputStream(socket.getInputStream());
         oos = new ObjectOutputStream(socket.getOutputStream());
@@ -90,6 +87,7 @@ class PythonCommunicationHelper {
 
     public void close(){
     //    TODO: close all resources
+        server.close();
     }
 
     public String getMsg() throws IOException, ClassNotFoundException {
