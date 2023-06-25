@@ -158,7 +158,7 @@ class SafeChassisMoveAction(action.Action):
     def _start_security_monitor(self):
         print("+++ security_monitor init")
         sdk_handler.SECURITY_MONITOR.register_and_start(
-            obj=self, check_distance=200
+            obj=self, check_distance=300
         )
 
     def _start_action_completed_monitor(self):

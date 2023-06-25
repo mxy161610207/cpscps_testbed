@@ -69,7 +69,7 @@ def sys_unsub(self):
         sub_dds = self._robot.dds
         return sub_dds.del_subject_info(dds.DDS_TOF)
 
-def md_sub_distance(self, freq=5, callback=None, *args, **kw):
+def md_sub_angle(self, freq=5, callback=None, *args, **kw):
         """ mxy_edit
         用户调用的 订阅云台姿态角信息
 
@@ -79,7 +79,7 @@ def md_sub_distance(self, freq=5, callback=None, *args, **kw):
         usr_loop = self._max_freq // freq
         return self._subject.set_usr_sub(usr_loop,callback,args,kw)
 
-def md_unsub_distance(self):
+def md_unsub_angle(self):
         """ mxy_edit
         用户调用的 取消距离传感器的信息订阅。
         """
@@ -92,6 +92,6 @@ offical.Gimbal.sys_sub_handler = sys_sub_handler
 offical.Gimbal.sys_sub = sys_sub
 offical.Gimbal.sys_unsub = sys_unsub
 
-offical.Gimbal.sub_distance = md_sub_distance
-offical.Gimbal.unsub_distance = md_unsub_distance
+offical.Gimbal.sub_angle = md_sub_angle
+offical.Gimbal.unsub_angle = md_unsub_angle
 

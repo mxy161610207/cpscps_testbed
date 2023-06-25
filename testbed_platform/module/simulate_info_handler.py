@@ -127,6 +127,13 @@ class SimulateInfoHandler(SensorSourceHandler):
             time.sleep(0.05)
 
     def send_status(self,status='init'):
+        if status == 'init':
+            self._car_handler._timer_manager.reset_timer()
+        elif status == 'end':
+            self._car_handler._timer_manager.print_timer()
+        elif status == 'adjust':
+            self._car_handler._timer_manager.adjust_count+=1
+            self._car_handler._timer_manager.print_timer()
         status_json={
             'type':'system',
             'status':status

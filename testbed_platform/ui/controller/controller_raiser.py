@@ -96,11 +96,13 @@ class DJIControllerPanel(BaseControllerPanel):
 
         button_name_list=[
             ['前进','左移','后退','右移'],
+            ['小前进','小左移','小后退','小右移'],
             ['左转45','小左转','小右转','右转45'],
             ['掉头','定位刷新']
         ]
         button_code_list=[
             ['W','A','S','D'],
+            ['w','a','s','d'],
             ['L','l','r','R'],
             ['B','F']
         ]
@@ -236,7 +238,7 @@ class UsrControllerPanel(BaseControllerPanel):
         grid_row+=status_size
         self._panel_total_row = grid_row+1
 
-        self._disable_all_button()
+        # self._disable_all_button()
 
     def handle_sensor_update(self,sensor_type,sensor_info):
         sensor_label = self._sensor_info[sensor_type]

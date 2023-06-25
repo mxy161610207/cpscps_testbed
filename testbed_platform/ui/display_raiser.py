@@ -114,11 +114,12 @@ class PositionCanvas:
     _map_size = 400
     _map_padxy = _map_size//10
 
-    def __init__(self, window, tag, name, x, y, syncer):
+    def __init__(self, window, tag, name, x, y, syncer, another_syncer = None):
         self._window = window
         self._tag = tag
         self._name = name
         self._syncer = syncer
+        self._another_syncer = another_syncer
 
         self._grid_row = x * self._grid_row_sz
         self._grid_col = y * self._grid_col_sz
@@ -189,6 +190,14 @@ class PositionCanvas:
             init_guard_ax_set(ax=self._fig_ax,title_str=self._name)
         else:
             init_simulate_ax_set(ax=self._fig_ax,title_str=self._name)
+
+        # 计算器定位结果
+        if self._another_syncer is not None:
+            pi = copy.deepcopy(self._another_syncer)
+            self._create_pos_fig(
+                position_info=pi,color='purple',
+                is_latest=True,aw_len=50 if self._tag=="grd" else 100
+                )
 
         # 绘制当前位置
         self._create_pos_fig(
@@ -418,7 +427,7 @@ def create_display(
     # 获取必要的资源
     
     # fake instead
-    # grd_location_syncer = platform_message_resources['grd_position']
+    old_location_syncer = platform_message_resources['grd_position']
     grd_location_syncer = platform_message_resources['fake_position']
     sim_location_syncer = platform_message_resources['sim_position'] 
 
@@ -432,7 +441,7 @@ def create_display(
 
     grd_canvas = PositionCanvas(window = root_window,
         tag="grd", name = "Guard Position", x=0, y=0,
-        syncer= grd_location_syncer)
+        syncer= grd_location_syncer, another_syncer = old_location_syncer)
     sim_canvas = PositionCanvas(window = root_window,
         tag="sim", name = "Simulate Position", x=0, y=1,
         syncer= sim_location_syncer)

@@ -241,6 +241,23 @@ def raiser(
 
         elif action_type == 'MOVE':
             action_reply_message = "error"
+
+            action = action_info['api_info']
+            if action == 'F' or action == 'B':
+                if action == 'B': SIM_SENDER._program_run = False
+                if SIM_SENDER._program_run == False:
+                    SIM_SENDER.init_phy_position_file()
+                    SIM_SENDER.send_status('init')
+                    SIM_SENDER._program_run = True
+                else:
+                    SIM_SENDER._program_run = False
+                    SIM_SENDER.send_status('end')
+                    TIME_MANAGER.print_timer()
+
+
+            if SIM_SENDER._program_run == True:
+                if action_info['api_version'] == 'DJI':
+                    action_info['api_version'] = 'USER'
             
             # 初始化阶段，动作全部直接执行
             if action_info['api_version'] == 'DJI':
@@ -263,7 +280,7 @@ def raiser(
 
             # 程序解析阶段
             elif action_info['api_version'] == 'USER':
-                if (sdk_platform_status.value != 2):
+                if (sdk_platform_status.value != 1 and sdk_platform_status.value != 2):
                     print("sdk_platform_status = {}, but run DJI sdk".format(
                             sdk_platform_status.value))
                     raise PlatformException("")

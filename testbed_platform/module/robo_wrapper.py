@@ -52,13 +52,13 @@ class RoboMasterEPWrapper:
         self._sdk_syncer['x'] = int(x*1000) + 2700//2
         self._sdk_syncer['y'] = int(-y*1000) + 2700//2
 
-        
-        self._sdk_syncer['x'] +=(random.random()-0.5)*4
-        self._sdk_syncer['y'] +=(random.random()-0.5)*4
+        # mxy noisy here
+        self._sdk_syncer['x'] +=(random.random()-0.5)*4 # 8
+        self._sdk_syncer['y'] +=(random.random()-0.5)*4 # 8
 
     def update_angle(self,angle):
         self._sdk_syncer['deg'] = angle
-        self._sdk_syncer['deg']+=(random.random()-0.5)*6
+        self._sdk_syncer['deg']+=(random.random()-0.5)*6 # 10
         self._sdk_syncer['rad'] = math.radians(angle)
 
     def get_initialized_robot(self):
@@ -145,21 +145,48 @@ class RoboMasterEPWrapper:
             while(1):
                 dis = self._phy_msg_sender.info.get_sensor_data_info()[:]
                 min_id = 0
+                max_id = 0
                 for i in range(4):
                     if dis[i]<dis[min_id]: min_id=i
+                    if dis[i]>dis[max_id]: max_id=i
 
-                if (dis[min_id]>400): break
-                match_distance = 400 - dis[min_id]
-                match_distance = max(100,match_distance)
+                away_dis = 600
+                if (dis[min_id]>away_dis): break
 
-                print(">>> adjust {} {} {}".format(dis_dir[min_id],
-                dis[min_id],match_action[min_id]))
-                self.do_action(match_action[min_id],
-                    move_dis=max(0.1,match_distance*0.001))
+                # 尝试放松最小距离 30cm
+                match_distance = away_dis - dis[min_id]
+                match_distance = max(300,match_distance)
+
+                # 这个距离如果对侧不能移动，放弃
+                rev_id = (2+min_id)%4
+                can_mov_max = dis[rev_id]
+
+                if (can_mov_max-300 > match_distance):
+                    # 移动
+                    print(">>> adjust-1 {} {} {}".format(
+                        dis_dir[min_id],
+                        dis[min_id],
+                        match_action[min_id]))
+                    
+                    self.do_action(match_action[min_id],
+                        move_dis=max(0.1,match_distance*0.001))
+                else: # 从最大距离移动一段
+                    match_distance = min(300,dis[max_id]-300)
+
+                    rev_id = (2+max_id)%4
+                    can_mov_max = dis[rev_id]
+
+                    print(">>> adjust-2 {} {} {}".format(
+                        dis_dir[max_id],
+                        dis[max_id],
+                        match_action[rev_id]))
+                    self.do_action(match_action[rev_id],
+                        move_dis=max(0.1,match_distance*0.001))
+
 
             # step2 
             self.do_action('B',self._robomaster_ep)
-            time.sleep(0.5)
+            time.sleep(1)
 
         # stop adjust status
 
@@ -202,10 +229,59 @@ class RoboMasterEPWrapper:
         
         # print("[sdk_handler] dji action success")
 
+    def convert(self, action):
+        large_move_dis = 0.8
+        small_move_dis = 0.2
+        large_rot_deg = 90
+        small_rot_deg = 10
+        if (action == 'W'):
+            return large_move_dis,0,0
+        elif (action == 'S'):
+            return -large_move_dis,0,0
+        elif (action == 'A'):
+            return 0,-large_move_dis,0
+        elif (action == 'D'):
+            return 0,large_move_dis,0
+        elif (action == 'w'):
+            return small_move_dis,0,0
+        elif (action == 's'):
+            return -small_move_dis,0,0
+        elif (action == 'a'):
+            return 0,-small_move_dis,0
+        elif (action == 'd'):
+            return 0,small_move_dis,0
+        elif (action == 'L'):
+            return 0,0,large_rot_deg
+        elif (action == 'R'):
+            return 0,0,-large_rot_deg
+        elif (action == 'l'):
+            return 0,0,small_rot_deg
+        elif (action == 'r'):
+            return 0,0,-small_rot_deg
+        elif (action == 'w'):
+            return small_move_dis,0,0
+        elif (action == 'B'):
+            self._rot_flip=-self._rot_flip
+            return 0,0,180*-self._rot_flip
+            # pos = self._phy_msg_sender.query_position()
+            # print("init = ({:.3f},{:.3f}) deg = {:.3f}".
+            #     format(pos['x'], pos['y'], pos['deg']))
+        else:
+            pass
+        
+
     def do_move_api(self,args):
         ep_chassis=self._robomaster_ep.chassis
-        
-        x,y,z = args['x'],args['y'],args['z']
+
+        print(args)
+        if 'x' in args:
+            x,y,z = args['x'],args['y'],args['z']
+        else:
+            try:
+                x,y,z = self.convert(args)
+            except Exception:
+                return
+        print(x,y,z,"converted")
         xy_speed=0.6
         z_speed=60
 

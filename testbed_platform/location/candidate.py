@@ -255,9 +255,11 @@ class PositionCands:
         if (self._is_fake_point):
             choice = 0
             for i,can in enumerate(self._cands_kids):
-                if (0<can.deg and can.deg<90):
+                if (math.fabs(can.deg)<=20):
                     choice = i
                     break
+                else:
+                    print(can.deg)
             self._choice = choice
         else:
             self._choice = self._select_simillest_kid(nxt_irs_pos,msg)

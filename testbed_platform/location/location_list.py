@@ -159,7 +159,7 @@ class LocationList:
 
     def change_state(self,next_state:SystemState):
         if next_state==SystemState.ADJUST:
-            if (self.state!=SystemState.NORMAL and self.state!=SystemState.ADJUST):
+            if (self.state!=SystemState.INIT and self.state!=SystemState.NORMAL and self.state!=SystemState.ADJUST):
                 raise Exception("{} cannot convert to {}".format(self.state,next_state))
         elif next_state==SystemState.NORMAL:
             # if (self.state!=SystemState.ADJUST and self.state!=SystemState.INIT):
@@ -210,7 +210,7 @@ class LocationList:
         print("="*50,file=CALC_LOG)
 
     @staticmethod
-    def _create_fake_point(car_x=250,car_y=250,car_rad = math.pi/2):
+    def _create_fake_point(car_x=250,car_y=250,car_rad = 0):
     # def _create_fake_point(car_x=600,car_y=1200,car_rad = math.pi/2):
         car_pos = Position({'x':car_x,'y':car_y,'rad':car_rad},
             is_irs_center=False)
@@ -350,6 +350,7 @@ class LocationList:
         #   cur_pos_cand._cands_kids : list of Position(irs)
         if (self.current._is_fake_point):
             # assert(len(legal_cands)!=0)
+            print("modified distance FRBL = {}".format(md_dis))
             print("init_select__")
         
         # 去除距离相差太远的

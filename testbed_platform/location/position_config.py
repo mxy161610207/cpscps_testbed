@@ -5,7 +5,7 @@ FB_MODIFY = 112
 LR_MODIFY = 118
 
 # E = 2420
-E = 2720
+E = 2700
 
 LOSS_TIME = 30
 

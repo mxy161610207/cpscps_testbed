@@ -13,6 +13,10 @@ class PlatformTimerManager():
         self.start_time = None
         self.adjust_lock = Lock()
 
+        self.total_adjust_time = 0
+        self.total_run_start_time = 0
+        self.adjust_count = 0
+
     def timer_register(self,timer):
         self.register_timer.append(timer)
 
@@ -45,6 +49,7 @@ class PlatformTimerManager():
         self._car_handler.led_behavior(state="normal")
 
         interval_append = time.time() - self.start_time
+        self.total_adjust_time += interval_append
         
         print("append time {:.3f}s".format(interval_append))
         for timer in self.register_timer:
@@ -55,6 +60,24 @@ class PlatformTimerManager():
 
         self.adjust_lock.release()
         print("[sdk] <<< EXIT adjust_mode")
+
+    def reset_timer(self):
+        self.total_adjust_time = 0
+        self.total_run_start_time = time.time()
+        self.adjust_count = 0
+
+    def print_timer(self):
+        end_time = time.time()
+        with open("timer_logger_{}.txt".format(int(end_time)),"w") as f:
+            t_all = end_time - self.total_run_start_time
+            print("Total time: {}".format(t_all))
+            print("Adjust time: {}".format(self.total_adjust_time))
+            print("Adjust count: {}".format(self.adjust_count))
+
+            print("Total time: {}".format(t_all),file=f)
+            print("Adjust time: {}".format(self.total_adjust_time),file=f)
+            print("Adjust count: {}".format(self.adjust_count),file=f)
+            print("Percent = {}".format(self.total_adjust_time/float(t_all)), file=f)
 
 
 class PlatformTimer(Thread):

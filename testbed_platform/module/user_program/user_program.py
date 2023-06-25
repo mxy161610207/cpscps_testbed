@@ -1,3 +1,5 @@
+import time
+
 def get_neighour(sensor,edge_len):
     dir = ['F','B','L','R']
     status = [0]*4
@@ -7,7 +9,6 @@ def get_neighour(sensor,edge_len):
             status[i]=1
 
     return status
-
 
 def run(ep_robot,sensor):
     ep_chassis = ep_robot.chassis
@@ -19,18 +20,29 @@ def run(ep_robot,sensor):
     dy = [0, 0, -1, 1]
     dir = "FBLR"
 
+
+
     with open('decision.txt', 'w') as f:
-        action = "FLFLLF"
+        action = "FLFRFLBRBLFLBLFRFLFLFLFRBRFRFL"
         for s in action:
             status = get_neighour(sensor,edge_len)
-            print(sensor,file=f)
-            print(status,file=f)
-            d=0
-            for _ in range(4):
-                if (dir[_]==s):
-                    d=_
-                    break
+            dis = sensor[s]
 
-            print(dx[d],dy[d],file=f)
+            left = 170
+            if (dis>left and dis-left>200):
+                dis-=left
+                dis=dis/1000
+                
+                d=0
+                for _ in range(4):
+                    if (dir[_]==s):
+                        d=_
+                        break
+                
+                print(sensor,file=f)
+                print(status,file=f)
 
-            ep_chassis.move(dx[d]*edge_len,dy[d]*edge_len,0,0.6,0).wait_for_completed()
+                ep_chassis.move(dx[d]*dis,dy[d]*dis,0,0.6,0).wait_for_completed()
+                time.sleep(1)
+
+            
