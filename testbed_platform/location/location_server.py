@@ -13,7 +13,8 @@ class LocationServer:
     def __init__(self,
         grd_location_syncer,sim_location_syncer,
         location_server_status,
-        location_server_addr, physical_sender_addr
+        location_server_addr, physical_sender_addr,
+        is_square_court
         ):
         print("__init__ LocationServer start")
         self.name = 'LocationServer'
@@ -22,6 +23,7 @@ class LocationServer:
         self._code_mode = "utf-8"
         self._self_addr = location_server_addr
         self._reply_addr = physical_sender_addr
+        self._is_square_court = is_square_court
 
         self._send_msg_queue = queue.Queue(64)
 
@@ -93,6 +95,7 @@ class LocationServer:
             recv_json = json.loads(recv_info)
             if recv_json['type']=='SYSTEM_TYPE':
                 print(recv_json['info'])
+            if (not self._is_square_court): continue
             self.handle_msg(recv_json)
         
         if (not self.is_shutdown()): self._status.value == -1
@@ -182,6 +185,7 @@ def raiser(
     sim_location_syncer = platform_message_resources['sim_position'] 
 
     location_server_status = platform_status_resources['location']
+    square_court_status = platform_status_resources['square_court']
 
     physical_sender_addr = platform_socket_address['phy_sender']
     location_server_addr = platform_socket_address['location']
@@ -189,7 +193,8 @@ def raiser(
     loc_server = LocationServer(
         grd_location_syncer,sim_location_syncer,
         location_server_status,
-        location_server_addr, physical_sender_addr)
+        location_server_addr, physical_sender_addr,
+        square_court_status.value)
     loc_server.start_udp_server()
 
     # 如果服务器停止运行，说明 location_server_status.value == -1

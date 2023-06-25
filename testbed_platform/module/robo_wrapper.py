@@ -188,7 +188,7 @@ class RoboMasterEPWrapper:
         self._timer_manager.adjust_status_end()
 
     def do_action(self,action, move_dis=0.5,rot_deg=45,mute=False):
-
+        print("do_action",action,move_dis)
         ep_chassis=self._robomaster_ep.chassis
         
         xy_speed=0.6

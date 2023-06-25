@@ -37,6 +37,7 @@ if __name__ == '__main__':
 
     # --- 定位系统工具 ---
     platform_status_resources['location'] = Value('i',0)
+    platform_status_resources['square_court'] = Value('i',0)
     platform_message_resources['location'] = Queue(-1)
     platform_message_resources['grd_position'] = platform_manager.dict()
     platform_message_resources['sim_position'] = platform_manager.dict()
@@ -127,11 +128,11 @@ if __name__ == '__main__':
 
     # ------ 进程按顺序开启 -------
 
-    # 1) 定位服务器进程 - 暂时弃用 使用原生SDK进行定位
-    # proc_server.start()
-    # location_server_status = platform_status_resources['location']
-    # while (location_server_status.value == 0):
-    #     time.sleep(1)
+    # 1) 定位服务器进程
+    proc_server.start()
+    location_server_status = platform_status_resources['location']
+    while (location_server_status.value == 0):
+        time.sleep(1)
 
     print("---- processor [proc_server] start ----\n")
 

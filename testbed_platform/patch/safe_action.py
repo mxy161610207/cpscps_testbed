@@ -80,9 +80,10 @@ class SafeChassisMoveAction(action.Action):
         for i in range(3):
             if (self._zero_element[i]==0):
                 continue
-
-            sgn = -1 if left[i]<0 else 1
-            left[i] += sgn * (0.1)
+            
+            if (abs(left[i])<0.1): left[i]=0.0
+            # sgn = -1 if left[i]<0 else 1
+            # left[i] += sgn * (0.1)
 
         return left
 
@@ -185,7 +186,7 @@ class SafeChassisMoveAction(action.Action):
         print("+++ action completed")
 
         if (not sdk_handler.SECURITY_MONITOR.isSet()):
-            print("why timeout?")
+            # print("why timeout?")
             sdk_handler.SECURITY_MONITOR.event_set_by('END')
 
         if (not exec_result):
@@ -227,6 +228,7 @@ class SafeChassisMoveAction(action.Action):
 
         # SafeAction的第一个动作片段需要
         if (self._state == action.ACTION_IDLE):
+            print("global switch to action.ACTION_RUNNING")
             self._changeto_state(action.ACTION_RUNNING)
 
         while (sdk_handler.CAR_HANDLER._adjust_state.value == 1):

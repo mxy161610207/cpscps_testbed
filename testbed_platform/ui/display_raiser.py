@@ -433,15 +433,22 @@ def create_display(
 
     global sdk_platform_status,sdk_platform_message,display_platform_message
     display_platform_message = platform_message_resources['display']
+    square_court_status = platform_status_resources['square_court']
     sdk_platform_status = platform_status_resources['sdk']
     sdk_platform_message = platform_message_resources['sdk']
 
     # 调用Tk()创建主窗口
     root_window = my_root_window_set()
 
-    grd_canvas = PositionCanvas(window = root_window,
-        tag="grd", name = "Guard Position", x=0, y=0,
-        syncer= grd_location_syncer, another_syncer = old_location_syncer)
+    if square_court_status.value==1:
+        grd_canvas = PositionCanvas(window = root_window,
+            tag="grd", name = "Guard Position", x=0, y=0,
+            syncer= grd_location_syncer, another_syncer = old_location_syncer)
+    else:
+        grd_canvas = PositionCanvas(window = root_window,
+            tag="grd", name = "Guard Position", x=0, y=0,
+            syncer= grd_location_syncer, another_syncer = None)
+    
     sim_canvas = PositionCanvas(window = root_window,
         tag="sim", name = "Simulate Position", x=0, y=1,
         syncer= sim_location_syncer)

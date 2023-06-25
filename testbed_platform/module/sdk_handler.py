@@ -78,7 +78,6 @@ def raiser(
     
     global_status = platform_status_resources['global']
     
-
     sdk_platform_status = platform_status_resources['sdk']
     sdk_platform_message = platform_message_resources['sdk']
 
@@ -192,9 +191,10 @@ def raiser(
                 if real_car:
                     # info = SIM_SENDER.update_distance_data_info()
                     # sensor_info = PHY_INFO.get_sensor_data_info()
-                    f_dir = open("D:\\GitHub\\cpscps_testbed\\unity_dir.txt","r")
-                    sensor_info = f_dir.read()
-                    f_dir.close()
+                    # f_dir = open("D:\\GitHub\\cpscps_testbed\\unity_dir.txt","r")
+                    # sensor_info = f_dir.read()
+                    # f_dir.close()
+                    sensor_info = str(sim_distance)
 
                 else:
                     sensor_info = "distance{}".format(random.randint(0,9999))
