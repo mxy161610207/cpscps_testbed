@@ -113,24 +113,25 @@ if __name__ == '__main__':
                 platform_socket_address)
     )
 
-    # 5) 测距显示进程
-    process_name = 'raise_sensor'
-    proc_sensor = Process(
-        target=sensor_display.raiser,
-        args=(  process_name,
-                platform_status_resources,
-                platform_message_resources,
-                platform_socket_address)
-    )
-    proc_sensor.daemon = True
-    proc_sensor.start()
+    # 5) 测距显示进程 - 暂时弃用，可开启用于调试
+    # process_name = 'raise_sensor'
+    # proc_sensor = Process(
+    #     target=sensor_display.raiser,
+    #     args=(  process_name,
+    #             platform_status_resources,
+    #             platform_message_resources,
+    #             platform_socket_address)
+    # )
+    # proc_sensor.daemon = True
+    # proc_sensor.start()
 
     # ------ 进程按顺序开启 -------
-    # 1) 定位服务器进程
-    proc_server.start()
-    location_server_status = platform_status_resources['location']
-    while (location_server_status.value == 0):
-        time.sleep(1)
+
+    # 1) 定位服务器进程 - 暂时弃用 使用原生SDK进行定位
+    # proc_server.start()
+    # location_server_status = platform_status_resources['location']
+    # while (location_server_status.value == 0):
+    #     time.sleep(1)
 
     print("---- processor [proc_server] start ----\n")
 

@@ -52,13 +52,8 @@ class RoboMasterEPWrapper:
         self._sdk_syncer['x'] = int(x*1000) + 2700//2
         self._sdk_syncer['y'] = int(-y*1000) + 2700//2
 
-        # mxy noisy here
-        self._sdk_syncer['x'] +=(random.random()-0.5)*4 # 8
-        self._sdk_syncer['y'] +=(random.random()-0.5)*4 # 8
-
     def update_angle(self,angle):
         self._sdk_syncer['deg'] = angle
-        self._sdk_syncer['deg']+=(random.random()-0.5)*6 # 10
         self._sdk_syncer['rad'] = math.radians(angle)
 
     def get_initialized_robot(self):
