@@ -4,6 +4,7 @@ import time
 
 def get_neighour(sensor,edge_len):
     dir = ['F','B','L','R']
+    print('[APP]',sensor)
     status = [0]*4
     for i in range(4):
         dis = sensor[dir[i]]
@@ -78,6 +79,19 @@ def run(ep_robot,sensor):
         print(vis,file=f)
         print(act,file=f)
 
+def run1(ep_robot,sensor):
+    ep_chassis = ep_robot.chassis
+    ep_chassis.move(0,0,90).wait_for_completed()
+    time.sleep(1)
+    ep_chassis.move(0.5,0,0).wait_for_completed()
+    time.sleep(1)
+    ep_chassis.move(-0.5,0,0).wait_for_completed()
+    time.sleep(1)
+
+def run2(ep_robot,sensor):
+    for _ in range(3):
+        print(sensor)
+        time.sleep(0.3)
 
 # ------- 下面是将论文中的usr_register 函数转为一个大疆程序的辅助代码 --------
 

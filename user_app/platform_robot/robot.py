@@ -28,9 +28,8 @@ class Robot:
         return self._chassis
 
     @property
-    def chassis(self):
-        return self._chassis
+    def sensor(self):
+        return self._sensor_adapter
     
-    @property
     def is_register_action(self,action_id):
         return self._sensor_adapter._watch_action == action_id

@@ -37,7 +37,7 @@ def action_json_sender(action_json):
     sdk_platform_message.put(action_json_str)
 
 
-# 另一个线程的，权限只能读取controller_status、controller_message和sensor
+# 线程，权限只能读取controller_status、controller_message和sensor
 def flush_controller_status(controller_status,controller_message,sim_distance):
     global conn, conn_addr 
     while True:
@@ -60,7 +60,43 @@ def flush_controller_status(controller_status,controller_message,sim_distance):
             if (reply_type=='MOVE'):
                 update_controller_status(controller_status, 1)
 
+# 线程
+def recv_and_handle_app_commond(controller_status,server_socket):
+    global conn, conn_addr 
 
+    while True:
+        if controller_status.value == -1: break
+        conn,conn_addr = server_socket.accept()
+        while True:
+            try:
+                msg = conn.recv(1024)
+                msg = msg.decode('utf-8')
+                print(f"[driver]:{msg}")
+                if msg.startswith('EXIT'):
+                    # 断开连接
+                    conn,conn_addr=None,None
+                    break
+                if msg.startswith('SHUTDOWN'):
+                    # 关机
+                    controller_status.value = -1
+                    break
+
+                api_json = {}
+                if (msg.startswith("SAFE: chassis move")):
+                    api_json = get_move_action(msg)
+                elif (msg.startswith("SAFE: chassis speed")):
+                    api_json = get_chassis_action(msg)
+
+                print(api_json)
+
+                if 'type' in api_json:
+                    # 加入等待队列
+                    action_json_sender(api_json)
+
+            except Exception as e:
+                print("ERROR",e)
+                break
+   
 # 处理执行器指令
 def get_chassis_action(action: str) -> List[float]:
     items = action.strip()[:-1].split(' ')
@@ -84,7 +120,7 @@ def get_move_action(action: str) -> List[float]:
     x,y,z,vxy,vz,timeout,uuid = [float(i) for i in [
         items[4], items[6], items[8], items[10],items[12], items[14], items[16]]]
     action_json={
-        'type':'DRIVE',
+        'type':'MOVE',
         'info':{
             'api_version':'USER',
             'api_info':{
@@ -136,12 +172,20 @@ def raiser(
     print("Proc [{}] start".format(proc_name))
 
     driver_server_addr = platform_socket_address['driver_server']
+
+    global controller_status
+    global controller_message
+    global sdk_platform_message
+
     controller_status = platform_status_resources['control']
     controller_message = platform_message_resources['control']
+    sdk_platform_message = platform_message_resources['sdk']
     sim_distance = platform_status_resources['sim_distance'] 
+
+    global conn,conn_addr
     conn,conn_addr=None,None
     
-    # 用于更新底盘状态，并产生驱动发送数据
+    # 线程 用于更新底盘状态，并产生驱动发送数据
     t_update = threading.Thread(
         target=flush_controller_status, 
         args=(controller_status,controller_message,sim_distance))
@@ -160,35 +204,20 @@ def raiser(
     # 创建一个服务器供上下文平台连接
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind(driver_server_addr)   
+    print(f"[bind] {driver_server_addr}")
     server_socket.listen(10)
 
-    last_action_id = Value('i',-1)
+    # 线程，接受并处理数据
+    t_recv = threading.Thread(
+        target=recv_and_handle_app_commond, 
+        args=(controller_status,server_socket))
+    t_recv.daemon = True
+    t_recv.start()
 
-    # 接受字符串
-    conn,conn_addr = server_socket.accept()
+    # 主程序 检测并退出
     while True:
-        if controller_status.value == -1:
-            break
-        try:
-            msg = conn.recv(1024)
-            msg = msg.decode('utf-8')
-            if msg == 'EXIT':
-                # 断开连接
-                controller_status.value = -1
-                continue
-
-            api_json = {}
-            if (msg.startswith("SAFE: chassis move")):
-                api_json = get_move_action(msg)
-            elif (msg.startswith("SAFE: chassis speed")):
-                api_json = get_move_action(msg)
-
-            if 'type' in api_json:
-                # 加入等待队列
-                action_json_sender(api_json)
-
-        except Exception as e:
-                break
+        if controller_status.value == -1: break
+        time.sleep(3)
         
     server_socket.close()
 

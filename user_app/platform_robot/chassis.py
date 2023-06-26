@@ -19,18 +19,21 @@ class ChassisMoveAction():
         self._event.clear()
 
     def wait_for_completed(self, timeout=None):
-        # 该动作运行，注册
+        # 该动作生成
         cmd = f'SAFE: chassis move x {self._x} y {self._y} z {self._z} vxy {self._spd_xy} vz {self._spd_z} timeout {-1 if timeout is None else timeout} uuid {self._action_id};'
+        
+        # 发送
         self._robot.helper.put_msg(cmd)
 
         # 等待注册成功
-        while True:
-            if self._robot.is_register_action: 
-                print(f'mxy Log: register_action id = {self._watch_action}')
-                break
-
+        while not self._robot.chassis._chassis_action_is_running:
+            pass
+        print("Action is running")
         # 等待驱动完成
-        self._event.wait()
+        while not self._robot.chassis._chassis_action_empty:
+            pass
+        
+        print("Action END")
         return True
 
 class Chassis:
@@ -47,10 +50,14 @@ class Chassis:
         if (not self._chassis_action_empty):
             raise Exception(f'mxy: reject move x {x} y {y} z {z} vxy {xy_speed} vz {z_speed} ')
         
-        action = ChassisMoveAction(x, y, z, xy_speed, z_speed)
+        action = ChassisMoveAction(x, y, z, xy_speed, z_speed, self._robot)
         return action
     
 
     @property
     def _chassis_action_empty(self):
-        return self._robot._sensor_adapter._chassis_status == 1
+        return self._robot._sensor_adapter._chassis_status == 1 or self._robot._sensor_adapter._chassis_status == 0
+
+    @property
+    def _chassis_action_is_running(self):
+        return self._robot._sensor_adapter._chassis_status == 2

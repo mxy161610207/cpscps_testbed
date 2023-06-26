@@ -9,12 +9,18 @@ class JavaCommunicationHelper:
         self.sender.connect((host, port))    # 发指令"SAFE: chassis"
         self._updater=updater
 
+        self._log_file = open("APP.txt","w")
+
         self._recv_thread=threading.Thread(target=self._update_thread)
+        self._recv_thread.daemon=True
         self._recv_thread.start()
 
+    def __del__(self):
+        self._log_file.close()
 
     def put_msg(self, msg: str):
-        print("mxy Log",msg)
+        # print("[Log] [JavaCommunicationHelper] send",msg)
+        print(f"[APP->PT->DRIVER]:{msg}",file=self._log_file)
         self.sender.send(f'{msg}\n'.encode('utf8'))
 
     def _update_thread(self):
@@ -24,5 +30,6 @@ class JavaCommunicationHelper:
                 break
             
             packet = packet.decode('utf8')
-            print(packet)
+            print(f"[DRIVER->PT->APP]:{packet.strip()}",file=self._log_file)
+            # print("[Log] [JavaCommunicationHelper] recv",packet)
             self._updater.update(packet)
