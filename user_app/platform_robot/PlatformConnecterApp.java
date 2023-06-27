@@ -20,6 +20,7 @@ public class PlatformConnecterApp extends AbstractApp {
     @Override
     public void getMsg(String sensorName, SensorData value) {
         logger.info(String.format("[%s]: getMsg(channel, msg) -> %s, %s", appName, sensorName, value));
+        // TODO
     }
 
     @Override
@@ -86,7 +87,6 @@ class PythonCommunicationHelper {
     }
 
     public void close(){
-    //    TODO: close all resources
         server.close();
     }
 

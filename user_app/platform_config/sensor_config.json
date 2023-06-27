@@ -3,6 +3,6 @@
   "type": "Sensor",
   "fields": [
     "ir_distance",
-    "chassis_status"
+    "chassis_status" 
   ]
 }

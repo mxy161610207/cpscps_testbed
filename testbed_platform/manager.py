@@ -31,10 +31,11 @@ if __name__ == '__main__':
     platform_socket_address = {
         'phy_sender': ('127.0.0.1', 41997),
         'sim_sender': ('127.0.0.1', 41998),
-        'sdk' : ('127.0.0.1', 41011),
+        # 'sdk' : ('127.0.0.1', 41011),
         'location': ('127.0.0.1', 41234),
         'sim_engine': ('127.0.0.1', 44321),
         'driver_server': ('127.0.0.1', 18080),
+        'context_platform': ('127.0.0.1', 9091),
     }
     
     platform_status_resources['global'] = Value('i',0)

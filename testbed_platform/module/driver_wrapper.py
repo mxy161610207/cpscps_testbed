@@ -60,39 +60,63 @@ def flush_controller_status(controller_status,controller_message,sim_distance):
             if (reply_type=='MOVE'):
                 update_controller_status(controller_status, 1)
 
-# 线程
-def recv_and_handle_app_commond(controller_status,server_socket):
-    global conn, conn_addr 
+# 线程 
+def register_actuator(context_platform_addr,controller_status):
+    actuator_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    print(f"[actutor register] {context_platform_addr}")
+    actuator_socket.connect(context_platform_addr)
+
+    register_json={
+        'message':{
+        "name": "RoboMasterEP",
+        "type": "Actor"
+        },
+        'cmd':'register'
+    }
+    config = json.dumps(register_json) +'\n'
+    config = config.encode('utf-8')
+    print(f"[actutor config] {config}")
+    actuator_socket.send(config)
+    print(f'send success')
+    #接收数据
+    register_back = actuator_socket.recv(1024).decode('utf-8')
+    print(register_back)
+    if register_back == None:
+        return
+    obj = json.loads(register_back)
+    if obj["cmd"] != "register_back" or obj["message"] != "true":
+        return
 
     while True:
         if controller_status.value == -1: break
-        conn,conn_addr = server_socket.accept()
         while True:
             try:
-                msg = conn.recv(1024)
+                msg = actuator_socket.recv(1024)
+                if msg == None:
+                    return
+                
                 msg = msg.decode('utf-8')
-                print(f"[driver]:{msg}")
-                if msg.startswith('EXIT'):
-                    # 断开连接
-                    conn,conn_addr=None,None
-                    break
-                if msg.startswith('SHUTDOWN'):
-                    # 关机
-                    controller_status.value = -1
-                    break
+                print(f"[from pt]:{msg}")
 
-                api_json = {}
-                if (msg.startswith("SAFE: chassis move")):
-                    api_json = get_move_action(msg)
-                elif (msg.startswith("SAFE: chassis speed")):
-                    api_json = get_chassis_action(msg)
+                act_json = json.dumps(msg)
 
-                print(api_json)
+                if (act_json['cmd'] == 'action_request'):
+                    reply_json = {
+                        'cmd':'action_back',
+                        'message':True}
+                    cmd_str = act_json['message']
+                    if (cmd_str.startswith("SAFE: chassis move")):
+                        api_json = get_move_action(msg)
+                    elif (cmd_str.startswith("SAFE: chassis speed")):
+                        api_json = get_chassis_action(msg)
 
-                if 'type' in api_json:
-                    # 加入等待队列
-                    action_json_sender(api_json)
-
+                    print(api_json)
+                    if 'type' in api_json:
+                        # 加入等待队列
+                        action_json_sender(api_json)
+                    
+                    actuator_socket.send(reply_json.encode("utf-8"))
+                    
             except Exception as e:
                 print("ERROR",e)
                 break
@@ -172,6 +196,7 @@ def raiser(
     print("Proc [{}] start".format(proc_name))
 
     driver_server_addr = platform_socket_address['driver_server']
+    context_platform_addr = platform_socket_address['context_platform'] # 9091
 
     global controller_status
     global controller_message
@@ -184,6 +209,13 @@ def raiser(
 
     global conn,conn_addr
     conn,conn_addr=None,None
+
+    # 控制器线程
+    t_actutor = threading.Thread(
+        target=register_actuator, 
+        args=(context_platform_addr,controller_status))
+    t_actutor.daemon = True
+    t_actutor.start()
     
     # 线程 用于更新底盘状态，并产生驱动发送数据
     t_update = threading.Thread(
@@ -207,12 +239,12 @@ def raiser(
     print(f"[bind] {driver_server_addr}")
     server_socket.listen(10)
 
-    # 线程，接受并处理数据
-    t_recv = threading.Thread(
-        target=recv_and_handle_app_commond, 
-        args=(controller_status,server_socket))
-    t_recv.daemon = True
-    t_recv.start()
+    # # 线程，接受并处理数据
+    # t_recv = threading.Thread(
+    #     target=recv_and_handle_app_commond, 
+    #     args=(controller_status,server_socket))
+    # t_recv.daemon = True
+    # t_recv.start()
 
     # 主程序 检测并退出
     while True:
