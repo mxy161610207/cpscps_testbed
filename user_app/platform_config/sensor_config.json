@@ -1,0 +1,8 @@
+{
+  "name": "RoboMasterEP",
+  "type": "Sensor",
+  "fields": [
+    "ir_distance",
+    "chassis_status"
+  ]
+}
