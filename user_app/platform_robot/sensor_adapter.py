@@ -21,7 +21,12 @@ class SensorAdapter:
         self._distance_logger_tag = False
 
     def update(self,msg:str):
-        info_json = json.loads(msg)
+        try:
+            info_json = json.loads(msg)
+        except Exception as e:
+            print("ERROR"+info_json)
+            print(e)
+            return
         
         # print("*****",self._distance)
         if 'ir_distance' in info_json and self._distance is not None:

@@ -62,7 +62,8 @@ def recv_helper(java_socket,socket_buffer):
             break
     
     if (data.find('alive_request')==-1):
-        print(f"[P->{threading.current_thread().name}] {data}")
+        # print(f"[P->{threading.current_thread().name}] {data}")
+        pass
     return data
 
 
@@ -70,7 +71,7 @@ def recv_helper(java_socket,socket_buffer):
 def json_send_helper(java_socket,json_data):
     message = json.dumps(json_data)
     message = (message+'\n').encode('utf-8')
-    print(f"[{threading.current_thread().name}->P] {message}")
+    # print(f"[{threading.current_thread().name}->P] {message}")
     java_socket.send(message)
 
 # 线程 注册执行器 actuator
@@ -102,7 +103,6 @@ def register_actuator(context_platform_addr,controller_status,sim_distance):
                 act_json = json.loads(msg)
 
                 if (act_json['cmd'] == 'action_request'):
-                    print("actutor")
                     reply_json = {
                         'cmd':'action_back',
                         'message':True}
@@ -112,26 +112,11 @@ def register_actuator(context_platform_addr,controller_status,sim_distance):
                     elif (cmd_str.startswith("SAFE: chassis speed")):
                         api_json = get_chassis_action(cmd_str)
 
-                    print(api_json)
+                    print("[PT]",api_json)
+
                     if 'type' in api_json:
                         # 加入等待队列
                         action_json_sender(api_json)
-                    
-                    json_send_helper(actuator_socket,reply_json)
-
-                elif (act_json['cmd'] == 'sensory_request'):
-                    for _ in range(5): print("STRANGE sensory_request")
-                    sensor_data_json={
-                        'ir_distance': copy.deepcopy(sim_distance),
-                        'chassis_status': controller_status.value
-                    }
-
-                    print("[Reply]",sensor_data_json)
-
-                    reply_json = {
-                        "cmd":"sensory_back",
-                        'message':json.dumps(sensor_data_json)
-                    }
                     
                     json_send_helper(actuator_socket,reply_json)
                     
@@ -172,16 +157,17 @@ def register_sensor(context_platform_addr,controller_status,sim_distance):
                 
                 snr_json = json.loads(msg)
                 if snr_json['cmd'] != 'alive_request':
-                    print("loads",snr_json)
+                    # print("loads",snr_json)
+                    pass
 
                 if (snr_json['cmd'] == 'sensory_request'):
-                    print("sensory")
+                    # print("sensory")
                     sensor_data_json={
                         'ir_distance': copy.deepcopy(sim_distance),
                         'chassis_status': controller_status.value
                     }
 
-                    print("[Reply]",sensor_data_json)
+                    # print("[Reply]",sensor_data_json)
 
                     reply_json = {
                         "cmd":"sensory_back",
@@ -213,81 +199,6 @@ def register_config_json_success(driver_socket,config_json,socket_buffer):
         return False
 
     return True
-
-# 废弃。
-def register_driver(context_platform_addr,controller_status,sim_distance):
-    driver_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    print(f"[sensor register] {context_platform_addr}")
-    driver_socket.connect(context_platform_addr)
-    socket_buffer=b''
-
-    sensor_config={
-        "name": "RoboMasterEP",
-        "type": "Sensor",
-        "fields": [
-            "ir_distance",
-            "chassis_status" 
-        ]
-    }
-    actuator_config = {
-        "name": "RoboMasterEP",
-        "type": "Actor"
-    }
-
-    if not register_config_json_success(driver_socket,sensor_config,socket_buffer) or not register_config_json_success(driver_socket,actuator_config,socket_buffer):
-        return
-    print(f"[{threading.current_thread().name} register]")
-
-    while True:
-        # try:
-            if controller_status.value == -1: break
-            while True:
-                msg = recv_helper(driver_socket,socket_buffer)
-                if msg is None:
-                    return
-                
-                msg_json = json.loads(msg)
-                if msg_json['cmd'] != 'alive_request':
-                    print("loads",msg_json)
-
-                if (msg_json['cmd'] == 'sensory_request'):
-                    print("sensory")
-                    sensor_data_json={
-                        'ir_distance': copy.deepcopy(sim_distance),
-                        'chassis_status': controller_status.value
-                    }
-
-                    print("[Reply]",sensor_data_json)
-
-                    reply_json = {
-                        "cmd":"sensory_back",
-                        'message':json.dumps(sensor_data_json)
-                    }
-                    
-                    json_send_helper(driver_socket,reply_json)
-                elif (msg_json['cmd'] == 'action_request'):
-                    print("actutor")
-                    reply_json = {
-                        'cmd':'action_back',
-                        'message':True}
-                    cmd_str = msg_json['message']
-                    if (cmd_str.startswith("SAFE: chassis move")):
-                        api_json = get_move_action(cmd_str)
-                    elif (cmd_str.startswith("SAFE: chassis speed")):
-                        api_json = get_chassis_action(cmd_str)
-
-                    print(api_json)
-                    if 'type' in api_json:
-                        # 加入等待队列
-                        action_json_sender(api_json)
-                    
-                    json_send_helper(driver_socket,reply_json)
-                        
-        # except Exception as e:
-        #     print("ERROR",e)
-        #     break
-    
-    print(f"[driver] end...")
 
 # 处理执行器指令 drive_speed
 def get_chassis_action(action: str) -> List[float]:
@@ -408,14 +319,6 @@ def raiser(
         args=(context_platform_addr,controller_status,sim_distance))
     t_sensor.daemon = True
     t_sensor.start()
-
-    # 线程 both
-    # t_driver = threading.Thread(
-    #     name='Driver',
-    #     target=register_driver, 
-    #     args=(context_platform_addr,controller_status,sim_distance))
-    # t_driver.daemon = True
-    # t_driver.start()
 
     # 主程序 检测并退出
     while True:

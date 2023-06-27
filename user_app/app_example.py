@@ -109,6 +109,6 @@ if __name__ == '__main__':
     ep_sensor = ep_robot.sensor
     ep_sensor.sub_distance(5, sub_data_handler, distance_logger)
 
-    run1(ep_robot,distance_logger)
+    run(ep_robot,distance_logger)
 
     ep_sensor.unsub_distance()

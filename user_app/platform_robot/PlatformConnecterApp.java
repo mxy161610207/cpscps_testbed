@@ -1,5 +1,6 @@
 package app;
 
+import common.struct.enumeration.CmdType;
 import common.struct.info.ActorInfo;
 import common.struct.info.SensorInfo;
 import common.struct.SensorData;
@@ -16,8 +17,12 @@ import java.util.Map;
 public class PlatformConnecterApp extends AbstractApp {
     @Override
     public void getMsg(String sensorName, SensorData value) {
-        logger.info(String.format("[%s]: getMsg(channel, msg) -> %s, %s", appName, sensorName, value));
-        // TODO
+        if (pythonClient !=null){
+            logger.info(String.format("[%s]: getMsg(channel, msg) -> %s, %s", appName, sensorName, value));
+            pythonClient.println(value);
+        }else{
+            logger.info(String.format("[%s]: getMsg DROP",appName));
+        }
     }
 
     @Override
@@ -26,8 +31,10 @@ public class PlatformConnecterApp extends AbstractApp {
         this.appDescription = "FooBar";
     }
 
-    private static final String sensorName = "RoboMasterEP";
-    private static final String actuatorName = "RoboMasterEP";
+    private static final String sensorName = "RoboMasterEPSensor";
+    private static final String actuatorName = "RoboMasterEPActor";
+
+    private static PrintWriter pythonClient = null;
 
     public static void main(String[] args) throws InterruptedException, IOException, ClassNotFoundException {
         PlatformConnecterApp app = new PlatformConnecterApp();
@@ -36,9 +43,10 @@ public class PlatformConnecterApp extends AbstractApp {
         connector.registerApp(app);
         connector.checkConnected();
 
+        // TODO: register sensor
         Map<String, SensorInfo> supportedSensors = connector.getSupportedSensors();
         if (supportedSensors.containsKey(sensorName) && supportedSensors.get(sensorName).state == State.ON) {
-            connector.registerSensor(sensorName, SensorMode.PASSIVE, 10);
+            connector.registerSensor(sensorName, SensorMode.PASSIVE, 5);
         } else {
             throw new RuntimeException();
         }
@@ -51,25 +59,30 @@ public class PlatformConnecterApp extends AbstractApp {
             throw new RuntimeException();
         }
 
+        System.out.println("success");
+        connector.getMsgThread(CmdType.START);
+        System.out.println("getMsgThread");
+
         ServerSocket appServer = new ServerSocket(18888);
         Socket clientSocket = appServer.accept();
-
         BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-        PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+        pythonClient = new PrintWriter(clientSocket.getOutputStream(), true);
+
 
         while(true){
             String cmd = in.readLine();
             if (cmd != null && (cmd.startsWith("SAFE: "))) {
                 connector.setActorCmd(actuatorName, cmd);
             }else if ("EXIT".equals(cmd)) {
-                break;
+                pythonClient = null;
             } else {
                 throw new RuntimeException();
             }
         }
 
-        appServer.close();
-        connector.unregisterApp(app);
-        connector.disConnectPlatform();
+
+//        appServer.close();
+//        connector.unregisterApp(app);
+//        connector.disConnectPlatform();
     }
 }
