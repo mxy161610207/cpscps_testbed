@@ -1,20 +1,17 @@
 package app;
 
-import app.struct.ActorInfo;
-import app.struct.SensorInfo;
+import common.struct.info.ActorInfo;
+import common.struct.info.SensorInfo;
 import common.struct.SensorData;
 import common.struct.State;
-import common.struct.enumeration.CmdType;
 import common.struct.enumeration.SensorMode;
-import org.apache.log4j.net.SocketServer;
+import org.apache.commons.lang3.ObjectUtils;
+import org.junit.Test;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Map;
-import java.util.Objects;
 
 public class PlatformConnecterApp extends AbstractApp {
     @Override
@@ -54,47 +51,25 @@ public class PlatformConnecterApp extends AbstractApp {
             throw new RuntimeException();
         }
 
-        PythonCommunicationHelper helper = new PythonCommunicationHelper();
+        ServerSocket appServer = new ServerSocket(18888);
+        Socket clientSocket = appServer.accept();
 
-        while (true) {
+        BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+        PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+
+        while(true){
+            String cmd = in.readLine();
             if (cmd != null && (cmd.startsWith("SAFE: "))) {
                 connector.setActorCmd(actuatorName, cmd);
-            } else if ("EXIT".equals(cmd)) {
+            }else if ("EXIT".equals(cmd)) {
                 break;
             } else {
                 throw new RuntimeException();
             }
         }
 
-        helper.close();
+        appServer.close();
         connector.unregisterApp(app);
         connector.disConnectPlatform();
-    }
-}
-
-
-class PythonCommunicationHelper {
-    private static final int port = 18080;
-    private ObjectInputStream ois;
-    private ObjectOutputStream oos;
-    private ServerSocket server;
-
-    public void waitForConnect() throws IOException {
-        server = new ServerSocket(port);
-        Socket socket = server.accept();
-        ois = new ObjectInputStream(socket.getInputStream());
-        oos = new ObjectOutputStream(socket.getOutputStream());
-    }
-
-    public void close(){
-        server.close();
-    }
-
-    public String getMsg() throws IOException, ClassNotFoundException {
-        return ((String) ois.readObject()).strip();
-    }
-
-    public void putMsg(String msg) throws IOException {
-        oos.writeObject(msg+"\n");
     }
 }

@@ -79,6 +79,7 @@ if __name__ == '__main__':
     # 1) 小车状态进程
     process_name = 'raise_sdk_handler'
     proc_platform = Process(
+        name= process_name,
         target=sdk_handler.raiser,
         args=(  process_name,
                 platform_status_resources,
@@ -90,6 +91,7 @@ if __name__ == '__main__':
     # 2) 定位系统进程
     process_name = 'raise_location_server'
     proc_server = Process(
+        name= process_name,
         target=location_server.raiser,
         args=(  process_name,
                 platform_status_resources,
@@ -101,6 +103,7 @@ if __name__ == '__main__':
     # 3) 前端显示进程
     process_name = 'raise_display'
     proc_display = Process(
+        name= process_name,
         target=display_raiser.raiser,
         args=(  process_name,
                 platform_status_resources,
@@ -112,6 +115,7 @@ if __name__ == '__main__':
     if (not is_driver_mode):
         process_name = 'raise_controller'
         proc_controller = Process(
+            name= process_name,
             target=controller_raiser.raiser,
             args=(  process_name,
                     platform_status_resources,
@@ -121,6 +125,7 @@ if __name__ == '__main__':
     else:
         process_name = 'raise_driver'
         proc_controller = Process(
+            name= process_name,
             target=driver_wrapper.raiser,
             args=(  process_name,
                     platform_status_resources,
@@ -130,7 +135,8 @@ if __name__ == '__main__':
 
     # 5) 测距显示进程 - 暂时弃用，可开启用于调试
     # process_name = 'raise_sensor'
-    # proc_sensor = Process(
+    # proc_sensor = Process(  
+    #     name= process_name,
     #     target=sensor_display.raiser,
     #     args=(  process_name,
     #             platform_status_resources,

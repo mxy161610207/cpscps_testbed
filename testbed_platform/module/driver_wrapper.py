@@ -37,91 +37,259 @@ def action_json_sender(action_json):
     sdk_platform_message.put(action_json_str)
 
 
-# 线程，权限只能读取controller_status、controller_message和sensor
-def flush_controller_status(controller_status,controller_message,sim_distance):
-    global conn, conn_addr 
+# 线程 当move完成时更新状态，权限只能读取controller_status、controller_message
+def flush_controller_status(controller_status,controller_message):
     while True:
-        if controller_message.empty():
-            send_json={
-                'ir_distance': copy.deepcopy(sim_distance),
-                'chassis_status': controller_status.value
-            }
-            send_json_str = json.dumps(send_json)
-            if conn is not None:
-                conn.send(f'{send_json_str}\n'.encode('utf8'))
-            time.sleep(0.1)
-        else:
-            reply_json_str = controller_message.get()
-            reply_json = json.loads(reply_json_str)
-            if (reply_json['status']!='success'):
-                update_controller_status(controller_status, -1)
-            
-            reply_type,reply_info = reply_json['type'],reply_json['info']
-            if (reply_type=='MOVE'):
+        reply_json_str = controller_message.get()
+        reply_json = json.loads(reply_json_str)
+        if (reply_json['status']!='success'):
+            update_controller_status(controller_status, -1)
+        
+        reply_type,reply_info = reply_json['type'],reply_json['info']
+        if (reply_type=='MOVE'):
                 update_controller_status(controller_status, 1)
 
-# 线程 
-def register_actuator(context_platform_addr,controller_status):
+# 由于从 java socket读数据导致的
+def recv_helper(java_socket,socket_buffer):
+    data = None
+    while True:
+        r = java_socket.recv(1024)
+        socket_buffer+=r
+        split_pos = socket_buffer.find(b'\n')
+        if split_pos!=-1:
+            data = socket_buffer[:split_pos].decode("utf-8")
+            socket_buffer = socket_buffer[split_pos+1:]
+            break
+    
+    if (data.find('alive_request')==-1):
+        print(f"[P->{threading.current_thread().name}] {data}")
+    return data
+
+
+# 向java socket写数据，末尾加\n
+def json_send_helper(java_socket,json_data):
+    message = json.dumps(json_data)
+    message = (message+'\n').encode('utf-8')
+    print(f"[{threading.current_thread().name}->P] {message}")
+    java_socket.send(message)
+
+# 线程 注册执行器 actuator
+def register_actuator(context_platform_addr,controller_status,sim_distance):
     actuator_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    actuator_socket.bind(("127.0.0.1",51234))
     print(f"[actutor register] {context_platform_addr}")
     actuator_socket.connect(context_platform_addr)
+    actuator_socket_buffer=b''
 
-    register_json={
-        'message':{
-        "name": "RoboMasterEP",
+    actuator_config = {
+        "name": "RoboMasterEPActor",
         "type": "Actor"
-        },
-        'cmd':'register'
     }
-    config = json.dumps(register_json) +'\n'
-    config = config.encode('utf-8')
-    print(f"[actutor config] {config}")
-    actuator_socket.send(config)
-    print(f'send success')
-    #接收数据
-    register_back = actuator_socket.recv(1024).decode('utf-8')
-    print(register_back)
-    if register_back == None:
+
+    if not register_config_json_success(actuator_socket,actuator_config,actuator_socket_buffer):
         return
-    obj = json.loads(register_back)
-    if obj["cmd"] != "register_back" or obj["message"] != "true":
-        return
+
+    print(f"[actutor register]")
 
     while True:
         if controller_status.value == -1: break
         while True:
-            try:
-                msg = actuator_socket.recv(1024)
-                if msg == None:
+            # try:
+                msg = recv_helper(actuator_socket,actuator_socket_buffer)
+                if msg is None:
                     return
                 
-                msg = msg.decode('utf-8')
-                print(f"[from pt]:{msg}")
-
-                act_json = json.dumps(msg)
+                act_json = json.loads(msg)
 
                 if (act_json['cmd'] == 'action_request'):
+                    print("actutor")
                     reply_json = {
                         'cmd':'action_back',
                         'message':True}
                     cmd_str = act_json['message']
                     if (cmd_str.startswith("SAFE: chassis move")):
-                        api_json = get_move_action(msg)
+                        api_json = get_move_action(cmd_str)
                     elif (cmd_str.startswith("SAFE: chassis speed")):
-                        api_json = get_chassis_action(msg)
+                        api_json = get_chassis_action(cmd_str)
 
                     print(api_json)
                     if 'type' in api_json:
                         # 加入等待队列
                         action_json_sender(api_json)
                     
-                    actuator_socket.send(reply_json.encode("utf-8"))
+                    json_send_helper(actuator_socket,reply_json)
+
+                elif (act_json['cmd'] == 'sensory_request'):
+                    for _ in range(5): print("STRANGE sensory_request")
+                    sensor_data_json={
+                        'ir_distance': copy.deepcopy(sim_distance),
+                        'chassis_status': controller_status.value
+                    }
+
+                    print("[Reply]",sensor_data_json)
+
+                    reply_json = {
+                        "cmd":"sensory_back",
+                        'message':json.dumps(sensor_data_json)
+                    }
                     
-            except Exception as e:
-                print("ERROR",e)
-                break
-   
-# 处理执行器指令
+                    json_send_helper(actuator_socket,reply_json)
+                    
+            # except Exception as e:
+            #     print("ERROR",e)
+            #     break
+    
+    print(f"[actutor] end...")
+
+# 线程 注册传感器 sensor
+def register_sensor(context_platform_addr,controller_status,sim_distance):
+    sensor_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sensor_socket.bind(("127.0.0.1",54321))
+    print(f"[sensor register] {context_platform_addr}")
+    sensor_socket.connect(context_platform_addr)
+    sensor_socket_buffer=b''
+
+    sensor_config={
+        "name": "RoboMasterEPSensor",
+        "type": "Sensor",
+        "fields": [
+            "ir_distance",
+            "chassis_status" 
+        ]
+    }
+
+    if not register_config_json_success(sensor_socket,sensor_config,sensor_socket_buffer):
+        return
+    print(f"[sensor register]")
+
+    while True:
+        # try:
+            if controller_status.value == -1: break
+            while True:
+                msg = recv_helper(sensor_socket,sensor_socket_buffer)
+                if msg is None:
+                    return
+                
+                snr_json = json.loads(msg)
+                if snr_json['cmd'] != 'alive_request':
+                    print("loads",snr_json)
+
+                if (snr_json['cmd'] == 'sensory_request'):
+                    print("sensory")
+                    sensor_data_json={
+                        'ir_distance': copy.deepcopy(sim_distance),
+                        'chassis_status': controller_status.value
+                    }
+
+                    print("[Reply]",sensor_data_json)
+
+                    reply_json = {
+                        "cmd":"sensory_back",
+                        'message':json.dumps(sensor_data_json)
+                    }
+                    
+                    json_send_helper(sensor_socket,reply_json)
+                        
+        # except Exception as e:
+        #     print("ERROR",e)
+        #     break
+    
+    print(f"[sensor] end...")
+
+
+def register_config_json_success(driver_socket,config_json,socket_buffer):
+    register_json={
+        'message': config_json,
+        'cmd':'register'
+    }
+    json_send_helper(driver_socket, register_json)
+
+    #接收注册结果
+    register_back = recv_helper(driver_socket,socket_buffer)
+    if register_back == None:
+        return False
+    obj = json.loads(register_back)
+    if obj["cmd"] != "register_back" or obj["message"] != "true":
+        return False
+
+    return True
+
+# 废弃。
+def register_driver(context_platform_addr,controller_status,sim_distance):
+    driver_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    print(f"[sensor register] {context_platform_addr}")
+    driver_socket.connect(context_platform_addr)
+    socket_buffer=b''
+
+    sensor_config={
+        "name": "RoboMasterEP",
+        "type": "Sensor",
+        "fields": [
+            "ir_distance",
+            "chassis_status" 
+        ]
+    }
+    actuator_config = {
+        "name": "RoboMasterEP",
+        "type": "Actor"
+    }
+
+    if not register_config_json_success(driver_socket,sensor_config,socket_buffer) or not register_config_json_success(driver_socket,actuator_config,socket_buffer):
+        return
+    print(f"[{threading.current_thread().name} register]")
+
+    while True:
+        # try:
+            if controller_status.value == -1: break
+            while True:
+                msg = recv_helper(driver_socket,socket_buffer)
+                if msg is None:
+                    return
+                
+                msg_json = json.loads(msg)
+                if msg_json['cmd'] != 'alive_request':
+                    print("loads",msg_json)
+
+                if (msg_json['cmd'] == 'sensory_request'):
+                    print("sensory")
+                    sensor_data_json={
+                        'ir_distance': copy.deepcopy(sim_distance),
+                        'chassis_status': controller_status.value
+                    }
+
+                    print("[Reply]",sensor_data_json)
+
+                    reply_json = {
+                        "cmd":"sensory_back",
+                        'message':json.dumps(sensor_data_json)
+                    }
+                    
+                    json_send_helper(driver_socket,reply_json)
+                elif (msg_json['cmd'] == 'action_request'):
+                    print("actutor")
+                    reply_json = {
+                        'cmd':'action_back',
+                        'message':True}
+                    cmd_str = msg_json['message']
+                    if (cmd_str.startswith("SAFE: chassis move")):
+                        api_json = get_move_action(cmd_str)
+                    elif (cmd_str.startswith("SAFE: chassis speed")):
+                        api_json = get_chassis_action(cmd_str)
+
+                    print(api_json)
+                    if 'type' in api_json:
+                        # 加入等待队列
+                        action_json_sender(api_json)
+                    
+                    json_send_helper(driver_socket,reply_json)
+                        
+        # except Exception as e:
+        #     print("ERROR",e)
+        #     break
+    
+    print(f"[driver] end...")
+
+# 处理执行器指令 drive_speed
 def get_chassis_action(action: str) -> List[float]:
     items = action.strip()[:-1].split(' ')
     x,y,z,timeout = [float(i) for i in [items[4], items[6], items[8], items[10]]]
@@ -138,7 +306,7 @@ def get_chassis_action(action: str) -> List[float]:
         }
     }
     return action_json
-
+# 处理执行器指令 move
 def get_move_action(action: str) -> List[float]:
     items = action.strip()[:-1].split(' ')
     x,y,z,vxy,vz,timeout,uuid = [float(i) for i in [
@@ -210,48 +378,49 @@ def raiser(
     global conn,conn_addr
     conn,conn_addr=None,None
 
-    # 控制器线程
-    t_actutor = threading.Thread(
-        target=register_actuator, 
-        args=(context_platform_addr,controller_status))
-    t_actutor.daemon = True
-    t_actutor.start()
-    
-    # 线程 用于更新底盘状态，并产生驱动发送数据
-    t_update = threading.Thread(
-        target=flush_controller_status, 
-        args=(controller_status,controller_message,sim_distance))
-    t_update.daemon = True
-    t_update.start()
-
-    # 外部结束界面
+    # 线程 外部结束该进程
     exit_func = []
     t_closer = threading.Thread(
         target=window_outside_exiter, 
         args=(controller_status,exit_func))
     t_closer.daemon = True
     t_closer.start()
+
+    # 线程 用于更新底盘状态
+    t_update = threading.Thread(
+        target=flush_controller_status, 
+        args=(controller_status,controller_message))
+    t_update.daemon = True
+    t_update.start()
+
+    # 线程 控制器
+    t_actutor = threading.Thread(
+        name='Actor',
+        target=register_actuator, 
+        args=(context_platform_addr,controller_status,sim_distance))
+    t_actutor.daemon = True
+    t_actutor.start()
     
+    # 线程 传感器
+    t_sensor = threading.Thread(
+        name='Sensor',
+        target=register_sensor, 
+        args=(context_platform_addr,controller_status,sim_distance))
+    t_sensor.daemon = True
+    t_sensor.start()
 
-    # 创建一个服务器供上下文平台连接
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind(driver_server_addr)   
-    print(f"[bind] {driver_server_addr}")
-    server_socket.listen(10)
-
-    # # 线程，接受并处理数据
-    # t_recv = threading.Thread(
-    #     target=recv_and_handle_app_commond, 
-    #     args=(controller_status,server_socket))
-    # t_recv.daemon = True
-    # t_recv.start()
+    # 线程 both
+    # t_driver = threading.Thread(
+    #     name='Driver',
+    #     target=register_driver, 
+    #     args=(context_platform_addr,controller_status,sim_distance))
+    # t_driver.daemon = True
+    # t_driver.start()
 
     # 主程序 检测并退出
     while True:
         if controller_status.value == -1: break
         time.sleep(3)
-        
-    server_socket.close()
 
     time.sleep(1)
     # 控制程序退出时，如果小车正常初始化完，不需要结束所有的资源

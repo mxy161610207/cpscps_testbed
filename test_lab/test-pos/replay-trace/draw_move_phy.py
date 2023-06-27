@@ -17,7 +17,7 @@ TAG,SIZE = 'phy',5
 # TAG,SIZE = 'sim',10
 # TAG,SIZE = 'sim',5
 
-subfolder = '3'
+subfolder = '14'
 ITER_CNT=150
 
 print(TAG)
